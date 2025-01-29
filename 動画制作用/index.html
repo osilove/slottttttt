@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>音声案内付き地図</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: 500px; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <button onclick="startNavigation()">音声案内開始</button>
+    <script>
+        const map = L.map('map').setView([35.6895, 139.6917], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        const points = [
+            [35.6895, 139.6917, "アナザーディメンション"],
+            [35.6890, 139.7000, "SCP財団"],
+            [35.6880, 139.7100, "バックルーム"]
+        ];
+
+        points.forEach(([lat, lng, label], index) => {
+            L.marker([lat, lng]).addTo(map).bindPopup(label);
+        });
+
+        function speakText(text) {
+            const synth = window.speechSynthesis;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = "ja-JP";
+            synth.speak(utterance);
+        }
+
+        function startNavigation() {
+            points.forEach(([lat, lng, label], index) => {
+                setTimeout(() => {
+                    map.setView([lat, lng], 15); // 地図を移動
+                    speakText(`次は${label}に向かってください。`);
+                }, index * 5000); // 5秒間隔で案内
+            });
+        }
+    </script>
+</body>
+</html>
