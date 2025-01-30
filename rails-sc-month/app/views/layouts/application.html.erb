@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrf-token" content="csrf_meta_tags">
+<script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+
+<title>月間スケジュール</title>
+<link rel="stylesheet" href="https://unpkg.com/ress/dist/ress.min.css">
+<%= stylesheet_link_tag 'application', media: 'all' %>
+
+</head>
+<body>
+
+<div class="top-image-placeholder" id="topImage">
+<img id="monthImage" src="" alt="月の画像" style="height: 100%; width: auto;">
+</div>
+
+<table class="schedule">
+<thead>
+<tr>
+<th>日付</th>
+<th>予定</th>
+</tr>
+</thead>
+<tbody id="scheduleBody"></tbody>
+</table>
+
+<div class="footer">
+<button id="prevMonth">← Last Month</button>
+<span id="currentMonth"></span>
+<button id="nextMonth">Next Month →</button>
+</div>
+
+<div class="bottom-image-placeholder" id="bottomImage">
+<img src="../assets/dragon.png" alt="ドラゴン画像" style="height: 100%; width: auto;">
+</div>
+
+<script>
+let scheduleBody = document.getElementById('scheduleBody');
+let currentMonthSpan = document.getElementById('currentMonth');
+let prevMonthButton = document.getElementById('prevMonth');
+let nextMonthButton = document.getElementById('nextMonth');
+let monthImage = document.getElementById('monthImage');
+
+let today = new Date();
+today.setHours(0, 0, 0, 0);
+let currentDate = new Date(today);
+
+let getMonthKey = (date) => {
+    let year = date.getFullYear();
+    let month = date.getMonth() + 1;
+    return `${year}-${month}`;
+};
+
+let loadMemos = (key) => {
+    let memos = localStorage.getItem(key);
+    return memos ? JSON.parse(memos) : [];
+};
+
+let saveMemos = (key, memos) => {
+    localStorage.setItem(key, JSON.stringify(memos));
+};
+
+let updateMonthImage = () => {
+    let currentMonth = currentDate.getMonth() + 1;
+    monthImage.src = `../assets/${currentMonth}月.png`;
+    monthImage.alt = `${currentMonth}月の画像`;
+};
+
+let renderMonth = () => {
+    scheduleBody.innerHTML = '';
+    let firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    let lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+    currentMonthSpan.textContent = `${firstDayOfMonth.getFullYear()}年${firstDayOfMonth.getMonth() + 1}月`;
+
+    if (firstDayOfMonth <= today) {
+        prevMonthButton.disabled = true;
+    } else {
+        prevMonthButton.disabled = false;
+    }
+
+    updateMonthImage();
+
+    let monthKey = getMonthKey(firstDayOfMonth);
+    let monthlyMemos = loadMemos(monthKey);
+
+    for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
+        let date = new Date(firstDayOfMonth);
+        date.setDate(day);
+
+        let dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+        let dateStr = `${date.getDate()}(${dayOfWeek})`;
+
+        let row = document.createElement('tr');
+        let dateCell = document.createElement('td');
+        dateCell.textContent = dateStr;
+
+        if (date.getTime() === today.getTime()) {
+            dateCell.classList.add('today');
+        }
+
+        let memoCell = document.createElement('td');
+        let memoList = document.createElement('ul');
+        memoList.className = 'memo-list';
+
+        (monthlyMemos[day - 1] || []).forEach((memo, index) => {
+            let now = new Date();
+            if (now >= new Date(`${date.toDateString()} ${memo.startTime}`) && now < new Date(`${date.toDateString()} ${memo.endTime}`)) {
+                memoCell.classList.add('current-time');
+            }
+
+            let memoItem = document.createElement('li');
+            memoItem.textContent = `${memo.text} (${memo.startTime} - ${memo.endTime})`;
+
+            if (memo.important) {
+                memoItem.classList.add('important');
+            }
+
+            memoItem.addEventListener('click', () => {
+                let newMemoText = prompt('予定内容を編集してください:', memo.text);
+                if (newMemoText === null || newMemoText.trim() === "") {
+                    if (confirm('内容が空白のため、この予定を削除しますか？')) {
+                        monthlyMemos[day - 1] = monthlyMemos[day - 1].filter((m) => m !== memo);
+                        saveMemos(monthKey, monthlyMemos);
+                        renderMonth();
+                    }
+                    return;
+                }
+
+                let newStartTime = prompt('開始時間を編集してください（例: 11:00 または 11）:', memo.startTime);
+                let newEndTime = prompt('終了時間を編集してください（例: 12:00 または 12）:', memo.endTime);
+
+                newStartTime = formatTime(newStartTime);
+                newEndTime = formatTime(newEndTime);
+
+                if (!newMemoText || !newStartTime || !newEndTime) {
+                    alert('すべての項目を正しく入力してください！');
+                    return;
+                }
+
+                if (newEndTime <= newStartTime) {
+                    alert('終了時間は開始時間より後である必要があります！');
+                    return;
+                }
+
+                monthlyMemos[day - 1][index] = { ...memo, text: newMemoText, startTime: newStartTime, endTime: newEndTime };
+                saveMemos(monthKey, monthlyMemos);
+                renderMonth();
+            });
+
+            let importantButton = document.createElement('button');
+            importantButton.textContent = memo.important ? '重要' : '普通';
+            importantButton.className = 'icon-button';
+            importantButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                memo.important = !memo.important;
+                saveMemos(monthKey, monthlyMemos);
+                renderMonth();
+            });
+
+            let deleteButton = document.createElement('button');
+            deleteButton.textContent = '削除';
+            deleteButton.className = 'delete-button';
+            deleteButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                if (confirm('本当に削除しますか？')) {
+                    monthlyMemos[day - 1] = monthlyMemos[day - 1].filter((m) => m !== memo);
+                    saveMemos(monthKey, monthlyMemos);
+                    renderMonth();
+                }
+            });
+
+            memoItem.appendChild(importantButton);
+            memoItem.appendChild(deleteButton);
+            memoList.appendChild(memoItem);
+        });
+
+        let addMemoBtn = document.createElement('button');
+        addMemoBtn.className = 'add-memo-button';
+        addMemoBtn.textContent = '追加予定';
+        addMemoBtn.addEventListener('click', () => {
+            if ((monthlyMemos[day - 1] || []).length >= 8) {
+                alert('1日に追加できる予定は最大8件までです。');
+                return;
+            }
+
+            let memoText = prompt('予定内容を入力してください:').trim();
+            let memoStartTime = prompt('開始時間を入力してください（例: 11:00 または 11）:').trim();
+            let memoEndTime = prompt('終了時間を入力してください（例: 12:00 または 12）:').trim();
+
+            memoStartTime = formatTime(memoStartTime);
+            memoEndTime = formatTime(memoEndTime);
+
+            if (!memoText || !memoStartTime || !memoEndTime) {
+                alert('すべての項目を正しく入力してください！');
+                return;
+            }
+
+            if (memoEndTime <= memoStartTime) {
+                alert('終了時間は開始時間より後である必要があります！');
+                return;
+            }
+
+            if (memoStartTime >= '24:00') {
+                alert('翌日から始まるスケジュールは入力できません');
+                return;
+            }
+
+            if (memoEndTime >= '24:00') {
+                alert('日をまたぐスケジュールは登録できません');
+                return;
+            }
+
+            if ((monthlyMemos[day - 1] || []).some((m) => (m.startTime < memoEndTime && m.endTime > memoStartTime))) {
+                alert('この時間には既に予定があります！');
+                return;
+            }
+
+            if (monthlyMemos.some((dayMemos) => (dayMemos || []).some((memo) => memo.text === memoText))) {
+                alert('同じ月に同じ内容の予定は登録できません！');
+                return;
+            }
+
+            let newMemo = { text: memoText, startTime: memoStartTime, endTime: memoEndTime, important: false };
+
+            if (!monthlyMemos[day - 1]) {
+                monthlyMemos[day - 1] = [];
+            }
+
+            monthlyMemos[day - 1].push(newMemo);
+            monthlyMemos[day - 1].sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+            saveMemos(monthKey, monthlyMemos);
+            renderMonth();
+        });
+
+        memoCell.appendChild(memoList);
+        memoCell.appendChild(addMemoBtn);
+
+        row.appendChild(dateCell);
+        row.appendChild(memoCell);
+        scheduleBody.appendChild(row);
+    }
+};
+
+let formatTime = (time) => {
+    let parts = time.split(':');
+    if (parts.length === 1) {
+        parts.push('00');
+    }
+    return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+};
+
+prevMonthButton.addEventListener('click', () => {
+    currentDate.setMonth(currentDate.getMonth() - 1);
+    renderMonth();
+});
+
+nextMonthButton.addEventListener('click', () => {
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    renderMonth();
+});
+
+renderMonth();
+</script>
+
+</body>
+</html>
