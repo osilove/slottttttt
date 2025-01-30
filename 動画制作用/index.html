@@ -43,6 +43,12 @@
                 }, index * 5000); // 5秒間隔で案内
             });
         }
+         // ESCキーでサイトに戻る
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        window.location.href = "バナナはおやつに入らない.html";
+      }
+    });
     </script>
 </body>
 </html>
