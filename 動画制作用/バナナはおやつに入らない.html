@@ -11,17 +11,17 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #000;
+            background-color: #cf12cf;
             color: #fff;
             transition: background-color 0.5s, color 0.5s;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 30px;
             text-align: center;
-            background-color: #1a1a1a;
+            background-color: #000000;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
         }
@@ -253,14 +253,14 @@ color: white;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: none;
             display: none;
             justify-content: center;
             align-items: center;
         }
         video {
-            max-width: 80%;
-            max-height: 80%;
+            max-width: 100%;
+            max-height: 100%;
         }
         .close-video {
             position: absolute;
@@ -270,6 +270,33 @@ color: white;
             color: white;
             cursor: pointer;
         }
+
+/* 動画のオーバーレイの透過とアニメーション */
+.video-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    opacity: 0; /* 初期状態は透明 */
+    transition: opacity 0.5s ease; /* フェードイン・フェードアウトのアニメーション */
+}
+
+/* 動画が表示されるとき */
+.video-overlay.show {
+    display: flex;
+    opacity: 1; /* フェードイン */
+}
+
+.large-video {
+    width: 90% !important;
+    height: 90% !important;
+}
+
     </style>
 </head>
 <body>
@@ -281,7 +308,7 @@ color: white;
 
     <div class="container">
         <header>
-            <h1>動画-1キーを押すときはpcの音量を下げて
+            <h1>動画-10キーを押すときはpcの音量を下げて
             </h1>
             <p id="current-date"></p>
         </header>
@@ -324,29 +351,30 @@ color: white;
      
 
 
-        function toggleBackgroundColor() {
-            const currentColor = localStorage.getItem('backgroundColor');
-            if (currentColor === 'black') {
-                document.body.style.backgroundColor = '#fff';
-                document.body.style.color = '#000';
-                localStorage.setItem('backgroundColor', 'white');
-            } else {
-                document.body.style.backgroundColor = '#000';
-                document.body.style.color = '#fff';
-                localStorage.setItem('backgroundColor', 'black');
-            }
-        }
+     function toggleBackgroundColor() {
+    const currentColor = localStorage.getItem('backgroundColor');
+    if (currentColor === 'cf12cf') {
+        document.body.style.backgroundColor = '#fff';  // 白に変更
+        document.body.style.color = '#fff';  // 文字色を黒に
+        localStorage.setItem('backgroundColor', 'white');
+    } else {
+        document.body.style.backgroundColor = '#cf12cf';  // ピンク色に変更
+        document.body.style.color = '#ff69b4';  // 文字色をピンクに変更
+        localStorage.setItem('backgroundColor', 'cf12cf');
+    }
+}
 
-        window.onload = function() {
-            const savedColor = localStorage.getItem('backgroundColor');
-            if (savedColor === 'white') {
-                document.body.style.backgroundColor = '#fff';
-                document.body.style.color = '#000';
-            } else {
-                document.body.style.backgroundColor = '#000';
-                document.body.style.color = '#fff';
-            }
-        };
+window.onload = function() {
+    const savedColor = localStorage.getItem('backgroundColor');
+    if (savedColor === 'cf12cf') {
+        document.body.style.backgroundColor = '#cf12cf';  // ピンク色
+        document.body.style.color = '#ff69b4';  // 文字色をピンクに
+    } else {
+        document.body.style.backgroundColor = '#fff';  // 白
+        document.body.style.color = '#fff';  // 文字色を黒に
+    }
+};
+
         
 
     document.addEventListener("keydown", function(event) {
@@ -360,7 +388,9 @@ color: white;
             "7": "7.mp4",
             "8": "8.mp4",
             "9": "9.mp4",
+            "0": "10.mp4",
         };
+        
 
         if (videoSources[event.key]) {
             playVideo(videoSources[event.key], event.key);
@@ -376,6 +406,14 @@ color: white;
         video.src = source;
         video.load(); // 動画をリセット
 
+        if (key === "0") {
+        video.style.width = "130%"; // 例えば90%に拡大
+        video.style.height = "130%";
+    } else {
+        video.style.width = "80vw"; // デフォルトサイズ
+        video.style.height = "80vh";
+    }
+
         video.onloadedmetadata = function() {
             video.play();
             video.volume = (key === "1") ? 0.5 : 1.0; // 1.mp4 の音量を小さく設定
@@ -388,15 +426,80 @@ color: white;
 
         overlay.style.display = "flex";
     }
+    function playVideo(source, key) {
+    const overlay = document.getElementById("videoOverlay");
+    const video = document.getElementById("videoPlayer");
 
-    function closeVideo() {
-        const overlay = document.getElementById("videoOverlay");
-        const video = document.getElementById("videoPlayer");
-        overlay.style.display = "none";
-        video.pause();
-        video.currentTime = 0;
+    video.src = source;
+    video.load(); // 動画をリセット
+
+    // 0キーが押された場合は拡大クラスを追加
+    if (key === "0") {
+        video.classList.add("large-video");
+    } else {
+        video.classList.remove("large-video");
     }
 
+    overlay.classList.add("show");
+
+    video.onloadedmetadata = function() {
+        video.play();
+        video.volume = (key === "1") ? 0.5 : 1.0;
+    };
+
+    video.onended = function() {
+        closeVideo();
+    };
+}
+
+function closeVideo() {
+    const overlay = document.getElementById("videoOverlay");
+    const video = document.getElementById("videoPlayer");
+
+    overlay.classList.remove("show");
+    video.pause();
+    video.currentTime = 0;
+
+    // 拡大クラスを削除して元のサイズに戻す
+    video.classList.remove("large-video");
+}
+
+
+    function playVideo(source, key) {
+    const overlay = document.getElementById("videoOverlay");
+    const video = document.getElementById("videoPlayer");
+
+    video.src = source;
+    video.load(); // 動画をリセット
+
+   
+
+
+    // 動画を再生する際にフェードインアニメーションを開始
+    overlay.classList.add("show");
+
+    video.onloadedmetadata = function() {
+        video.play();
+        video.volume = (key === "1") ? 0.5 : 1.0; // 1.mp4 の音量を小さく設定
+    };
+
+    // 動画が終了したらフェードアウト
+    video.onended = function() {
+        closeVideo();
+    };
+}
+
+function closeVideo() {
+    const overlay = document.getElementById("videoOverlay");
+    const video = document.getElementById("videoPlayer");
+
+    // フェードアウトアニメーション開始
+    overlay.classList.remove("show");
+    
+    // 動画を停止してリセット
+    video.pause();
+    video.currentTime = 0;
+}
 
 </script>
 </body>
