@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>赤い球を取り出すゲーム</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 50px;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+        }
+
+        .ball-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            position: relative;
+            width: 360px; /* キューとスタックの表示幅を調整 */
+            height: 50px;
+            border: 3px solid #333; /* 四角い枠 */
+            border-radius: 10px;
+            padding: 5px;
+            overflow-x: auto; /* 横スクロールを可能に */
+        }
+
+        .ball {
+            width: 30px;
+            height: 30px;
+            background-color: #3498db;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            transition: transform 0.3s ease, background-color 0.3s ease;
+        }
+
+        .red-ball {
+            background-color: #e74c3c;
+        }
+
+        .rail {
+            width: 100%;
+            height: 5px;
+            background-color: #ccc;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #27ae60;
+            transform: scale(1.1);
+        }
+
+        .message {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #e74c3c;
+            margin-top: 20px;
+            animation: bounce 1s infinite alternate;
+        }
+
+        .trial-count {
+            font-size: 1.2rem;
+            color: #2ecc71;
+            margin-top: 20px;
+        }
+
+        @keyframes bounce {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-10px); }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>赤い球を取り出すゲーム</h1>
+        <div class="queue-container">
+            <h2>キュー（FIFO）</h2>
+            <div id="queue-display" class="ball-container">
+                <div class="rail"></div>
+            </div>
+            <button id="enqueue-queue">エンキュー</button>
+            <button id="dequeue-queue">デキュー</button>
+        </div>
+
+        <div class="stack-container">
+            <h2>スタック（LIFO）</h2>
+            <div id="stack-display" class="ball-container">
+                <div class="rail"></div>
+            </div>
+            <button id="push-stack">プッシュ</button>
+            <button id="pop-stack">ポップ</button>
+        </div>
+
+        <div class="message" id="message"></div>
+        <div class="trial-count" id="trial-count"></div>
+    </div>
+
+    <script>
+        let queue = [];
+        let stack = [];
+        let redBallInQueue = false;  // キュー内の赤い球の状態
+        let redBallInStack = false;  // スタック内の赤い球の状態
+        let trialCount = 0;           // 試行回数
+
+        const queueDisplay = document.getElementById('queue-display');
+        const stackDisplay = document.getElementById('stack-display');
+        const enqueueQueueButton = document.getElementById('enqueue-queue');
+        const dequeueQueueButton = document.getElementById('dequeue-queue');
+        const pushStackButton = document.getElementById('push-stack');
+        const popStackButton = document.getElementById('pop-stack');
+        const message = document.getElementById('message');
+        const trialCountDisplay = document.getElementById('trial-count');
+
+        // 初期化: 赤い球をランダムにキューとスタックに配置
+        function initializeGame() {
+            queue = [];
+            stack = [];
+            trialCount = 0;
+            redBallInQueue = false;
+            redBallInStack = false;
+            message.textContent = '';
+            addBallsToQueueAndStack();
+            updateDisplay();
+            updateTrialCount();
+        }
+
+        // 赤い球をキューまたはスタックのどちらかに配置
+        function addBallsToQueueAndStack() {
+            const totalBalls = 5;
+            const queueRedBallIndex = Math.floor(Math.random() * 3) + 1;  // 1から3番目に配置
+            const stackRedBallIndex = Math.floor(Math.random() * 3) + 1;  // 1から3番目に配置
+
+            // キューに青い球を追加
+            for (let i = 0; i < totalBalls; i++) {
+                if (i === queueRedBallIndex) {
+                    queue.push('red');
+                    redBallInQueue = true;
+                } else {
+                    queue.push('blue');
+                }
+            }
+
+            // スタックに青い球を追加
+            for (let i = 0; i < totalBalls; i++) {
+                if (i === stackRedBallIndex) {
+                    stack.push('red');
+                    redBallInStack = true;
+                } else {
+                    stack.push('blue');
+                }
+            }
+        }
+
+        // 球の表示
+        function updateDisplay() {
+            // キューの表示
+            queueDisplay.innerHTML = queue.map((value) => {
+                return `<div class="ball ${value === 'red' ? 'red-ball' : ''}">${value === 'red' ? '赤' : ''}</div>`;
+            }).join('');
+
+            // スタックの表示
+            stackDisplay.innerHTML = stack.map((value) => {
+                return `<div class="ball ${value === 'red' ? 'red-ball' : ''}">${value === 'red' ? '赤' : ''}</div>`;
+            }).join('');
+        }
+
+        // 試行回数の表示
+        function updateTrialCount() {
+            trialCountDisplay.textContent = `試行回数: ${trialCount}`;
+        }
+
+        // 赤い球が取り出されてゲームクリアか確認
+        function checkGameClear() {
+            if (!redBallInQueue && !redBallInStack) {
+                message.textContent = 'ゲームクリア！赤い球を取り出しました';
+                setTimeout(() => {
+                    initializeGame(); // ゲームリセット
+                }, 2000);  // 2秒後にリセット
+            }
+        }
+
+        // エンキュー操作
+        enqueueQueueButton.addEventListener('click', () => {
+            if (queue.length < 5) {  // 最大5個まで
+                queue.push('blue');
+                trialCount++;
+                updateDisplay();
+                updateTrialCount();
+            }
+        });
+
+        // デキュー操作
+        dequeueQueueButton.addEventListener('click', () => {
+            if (queue.length > 0) {
+                const ball = queue.shift();
+                if (ball === 'red') redBallInQueue = false;
+                trialCount++;
+                updateDisplay();
+                checkGameClear();
+                updateTrialCount();
+            }
+        });
+
+        // プッシュ操作
+        pushStackButton.addEventListener('click', () => {
+            if (stack.length < 5) {  // 最大5個まで
+                stack.push('blue');
+                trialCount++;
+                updateDisplay();
+                updateTrialCount();
+            }
+        });
+
+        // ポップ操作
+        popStackButton.addEventListener('click', () => {
+            if (stack.length > 0) {
+                const ball = stack.pop();  // 最後の要素を取り出す
+                if (ball === 'red') redBallInStack = false;
+                trialCount++;
+                updateDisplay();
+                checkGameClear();
+                updateTrialCount();
+            }
+        });
+
+        // ゲーム開始
+        initializeGame();
+        
+               // ESCキーでサイトに戻る
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        window.location.href = "../サイト/desaku.html";
+      }
+    });
+    </script>
+</body>
+</html>

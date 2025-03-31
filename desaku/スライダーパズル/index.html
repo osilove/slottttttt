@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>スライダーパズル</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+
+    h1 {
+      margin-top: 20px;
+    }
+
+    #puzzle {
+      display: grid;
+      grid-template-columns: repeat(4, 100px);
+      grid-gap: 5px;
+      margin: 20px auto;
+      width: 430px;
+      height: 430px;
+    }
+
+    .puzzle-piece {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #ccc;
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      border-radius: 5px;
+      cursor: pointer;
+      height: 100px;
+      width: 100px;
+    }
+
+    .puzzle-piece.empty {
+      background-color: #fff;
+      cursor: default;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+
+    #gameStatus {
+      margin-top: 20px;
+      font-size: 24px;
+      font-weight: bold;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>スライダーパズル</h1>
+  <div id="puzzle">
+    <div class="puzzle-piece empty"></div>
+    <div class="puzzle-piece">1</div>
+    <div class="puzzle-piece">2</div>
+    <div class="puzzle-piece">3</div>
+    <div class="puzzle-piece">4</div>
+    <div class="puzzle-piece">5</div>
+    <div class="puzzle-piece">6</div>
+    <div class="puzzle-piece">7</div>
+    <div class="puzzle-piece">8</div>
+    <div class="puzzle-piece">9</div>
+    <div class="puzzle-piece">10</div>
+    <div class="puzzle-piece">11</div>
+    <div class="puzzle-piece">12</div>
+    <div class="puzzle-piece">13</div>
+    <div class="puzzle-piece">14</div>
+    <div class="puzzle-piece">15</div>
+  </div>
+  <button id="shuffleBtn">シャッフル</button>
+  <div id="gameStatus"></div>
+
+  <script>
+    // パズルの要素を取得
+    const puzzle = document.getElementById('puzzle');
+    const pieces = Array.from(puzzle.children);
+    const shuffleBtn = document.getElementById('shuffleBtn');
+    const gameStatus = document.getElementById('gameStatus');
+
+    // 空白のピースを探す
+    let emptyPiece = pieces.find(piece => piece.classList.contains('empty'));
+
+    // ピースをクリックした時の動作
+    function movePiece(clickedPiece) {
+      const emptyIndex = pieces.indexOf(emptyPiece);
+      const clickedIndex = pieces.indexOf(clickedPiece);
+
+      const rowEmpty = Math.floor(emptyIndex / 4);
+      const colEmpty = emptyIndex % 4;
+      const rowClicked = Math.floor(clickedIndex / 4);
+      const colClicked = clickedIndex % 4;
+
+      // 隣接していればピースを交換
+      if (Math.abs(rowEmpty - rowClicked) + Math.abs(colEmpty - colClicked) === 1) {
+        // ピースを交換
+        [emptyPiece.textContent, clickedPiece.textContent] = [clickedPiece.textContent, emptyPiece.textContent];
+        emptyPiece.classList.remove('empty');
+        clickedPiece.classList.add('empty');
+
+        // 空白のピースを更新
+        emptyPiece = clickedPiece;
+
+        // ゲームクリア判定
+        checkGameStatus();
+      }
+    }
+
+    // ピースをクリックするイベントリスナー
+    pieces.forEach(piece => {
+      piece.addEventListener('click', () => movePiece(piece));
+    });
+
+    // シャッフル機能
+    function shufflePuzzle() {
+      // 数字の順番をランダムに並べ替え
+      const numbers = Array.from({ length: 15 }, (_, i) => i + 1);
+      numbers.push(null); // 空白の位置
+
+      // 配列をシャッフル
+      numbers.sort(() => Math.random() - 0.5);
+
+      // ピースを更新
+      pieces.forEach((piece, index) => {
+        if (numbers[index] === null) {
+          piece.textContent = '';
+          piece.classList.add('empty');
+        } else {
+          piece.textContent = numbers[index];
+          piece.classList.remove('empty');
+        }
+      });
+
+      // 空白のピースを更新
+      emptyPiece = pieces.find(piece => piece.classList.contains('empty'));
+
+      // ゲームクリア判定をリセット
+      gameStatus.textContent = '';
+    }
+
+    // シャッフルボタンのイベント
+    shuffleBtn.addEventListener('click', shufflePuzzle);
+
+    // 初期状態でシャッフル
+    shufflePuzzle();
+
+    // ゲームの状態（クリア判定）を確認する関数
+    function checkGameStatus() {
+      const currentOrder = pieces.map(piece => piece.textContent).join('');
+      const correctOrder = '123456789101112131415';
+
+      if (currentOrder === correctOrder) {
+        gameStatus.textContent = 'ゲームクリア！';
+        gameStatus.style.color = 'blue';
+      }
+    }
+     // ESCキーでサイトに戻る
+     window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = "../サイト/desaku.html";
+            }
+        });
+  </script>
+</body>
+</html>
