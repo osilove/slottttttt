@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>通貨変換ツール</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            color: #333;
+        }
+        .converter {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>通貨変換ツール</h1>
+    <div class="converter">
+        <label for="amount">日本円 (JPY):</label>
+        <input type="number" id="amount" placeholder="金額を入力" />
+
+        <label for="currency">変換先通貨:</label>
+        <select id="currency">
+            <option value="USD">アメリカドル (USD)</option>
+            <option value="EUR">ユーロ (EUR)</option>
+            <option value="GBP">イギリスポンド (GBP)</option>
+            <option value="AUD">オーストラリアドル (AUD)</option>
+            <option value="CAD">カナダドル (CAD)</option>
+        </select>
+
+        <button onclick="convertCurrency()">変換</button>
+
+        <h3 id="result"></h3>
+    </div>
+
+    <script>
+        async function convertCurrency() {
+            const amount = document.getElementById('amount').value;
+            const currency = document.getElementById('currency').value;
+            const resultElement = document.getElementById('result');
+
+            if (!amount || amount <= 0) {
+                resultElement.textContent = '正しい金額を入力してください。';
+                return;
+            }
+
+            try {
+                const response = await fetch(`https://api.exchangerate-api.com/v4/latest/JPY`);
+
+                if (!response.ok) {
+                    throw new Error('為替レートの取得に失敗しました。');
+                }
+
+                const data = await response.json();
+                const rate = data.rates[currency];
+                const convertedAmount = (amount * rate).toFixed(2);
+
+                resultElement.textContent = `${amount} JPY は ${convertedAmount} ${currency} です。`;
+            } catch (error) {
+                resultElement.textContent = `エラー: ${error.message}`;
+            }
+        }
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = "../サイト/desaku.html";
+            }
+        });
+    </script>
+</body>
+</html>
