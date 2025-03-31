@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ガチャシミュレーター</title>
+    <link rel="stylesheet" href="styles.css">
+</head> 
+<body>
+    <div class="container"> 
+        <header>
+            <h1>ガチャシミュレーター</h1>
+        </header>
+        <section>
+            <div>
+                <label for="pu-probability">PUキャラの確率（%）:</label>
+                <input type="number" id="pu-probability" placeholder="0〜100" min="0" max="100">
+            </div>
+            <div>
+                <label for="skip-probability">すり抜けの確率（%）:</label>
+                <input type="number" id="skip-probability" placeholder="0〜100" min="0" max="100">
+           
+            <button id="set-probabilities">確率設定を反映</button> </div>
+            <button id="single-gacha-button">単発ガチャを引く</button>
+            <button id="ten-gacha-button">10連ガチャを引く</button>
+            <div id="result" class="result-container">
+                <p id="result-text">結果がここに表示されます</p>
+                <p id="stats">回数: 0回, PUキャラ🍋: 0回, すり抜け🦔: 0回</p>
+                <a href="../今日のガチャ運診断/今日のガチャ運診断.html" class="link-button">今日のガチャ運診断に行く</a>
+                 </div>
+                 <a href="../サイト/desaku.html" class="link-button">サイトに戻る</a>
+        </section>
+    </div>
+    <script src="script.js"></script>
+</body> 
+</html>

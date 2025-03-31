@@ -1,0 +1,14 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+#slots {
+    margin: 20px;
+}
+
+.slot {
+    width: 100px; /* 画像のサイズ */
+    height: 100px;
+    margin: 0 10px;
+}

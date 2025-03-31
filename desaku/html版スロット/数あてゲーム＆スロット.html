@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字当てゲームとスロットマシン</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>数字当てゲーム</h1>
+    <div id="guess-section">
+        <input type="number" id="guess-input" placeholder="1から1000の数を入力">
+        <button id="guess-button">推測</button>
+        <p id="guess-message"></p>
+        <a href="../html版スロット/スロット.html" class="link-button">スロット単体はこちら</a>
+    </div>
+
+    <div id="slot-machine" style="display: none;">
+        <h1>スロットマシン</h1>
+        <div id="slots">
+            <img class="slot" id="slot1" src="../画像/orange.png" alt="スロット1">
+            <img class="slot" id="slot2" src="../画像/lemon.png" alt="スロット2">
+            <img class="slot" id="slot3" src="../画像/cherry.png" alt="スロット3">
+        </div>
+        <button id="spin-button">スロットを回す</button>
+        <p id="slot-message"></p>
+    </div>
+    <a href="../サイト/desaku.html" class="link-button">サイトに戻る</a>
+    <script src="script.js"></script>
+</body>
+</html>

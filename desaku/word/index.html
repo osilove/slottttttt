@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WordをHTML化する</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <h1>Word貼ってみようぜ周遊</h1>
+    <input type="file" id="upload" accept=".docx">
+    <button id="download">Download Edited Data</button>
+    <button id="clearContent">削除</button>
+    <div id="content-container" contenteditable="true" style="border: 1px solid #ccc; padding: 10px; margin-top: 20px; max-width: 80%; margin-left: auto; margin-right: auto;">
+        編集する内容がここに表示されます。
+    </div>
+
+    <!-- Mammothライブラリ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+
+    <script>
+        // IndexedDB 初期化
+        let db;
+        const request = indexedDB.open("WordHtmlEditorDB", 1);
+
+        request.onupgradeneeded = function (e) {
+            db = e.target.result;
+            db.createObjectStore("contentStore", { keyPath: "id" });
+        };
+
+        request.onsuccess = function (e) {
+            db = e.target.result;
+            loadContentFromDB();
+        };
+
+        // ファイルアップロード
+        document.getElementById('upload').addEventListener('change', handleFileUpload);
+        document.getElementById('download').addEventListener('click', downloadEditedContent);
+        document.getElementById('clearContent').addEventListener('click', clearContent);
+
+        // Word→HTML変換
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                mammoth.convertToHtml({ arrayBuffer: e.target.result }).then(displayContent);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function displayContent(result) {
+            const container = document.getElementById('content-container');
+            container.innerHTML = result.value;
+            saveContentToDB();
+        }
+
+        // IndexedDBに保存
+        function saveContentToDB() {
+            const content = document.getElementById('content-container').innerHTML;
+            const tx = db.transaction('contentStore', 'readwrite');
+            const store = tx.objectStore('contentStore');
+            store.put({ id: 1, html: content });
+        }
+
+        // IndexedDBから読み込み
+        function loadContentFromDB() {
+            const tx = db.transaction('contentStore', 'readonly');
+            const store = tx.objectStore('contentStore');
+            const req = store.get(1);
+
+            req.onsuccess = () => {
+                if (req.result) {
+                    document.getElementById('content-container').innerHTML = req.result.html;
+                }
+            };
+        }
+
+        // 削除処理
+        function clearContent() {
+            document.getElementById('content-container').innerHTML = '';
+            const tx = db.transaction('contentStore', 'readwrite');
+            const store = tx.objectStore('contentStore');
+            store.delete(1);
+        }
+
+        // 編集中も自動保存
+        document.getElementById('content-container').addEventListener('input', saveContentToDB);
+
+        // ダウンロード機能
+        function downloadEditedContent() {
+            const content = document.getElementById('content-container').innerHTML;
+            const blob = new Blob([content], { type: 'text/html' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'edited_content.html';
+            link.click();
+        }
+
+        // ESCキーで戻る
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = "../サイト/desaku.html";
+            }
+        });
+    </script>
+
+    <a href="../excel/index.html" class="unit-conversion-button">Excelの編集はこちら</a>
+</body>
+
+<!-- CSSはそのまま -->
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        text-align: center;
+    }
+
+    h1 {
+        color: #333;
+    }
+
+    input[type="file"] {
+        margin-bottom: 20px;
+    }
+
+    #content-container {
+        background-color: #f9f9f9;
+        min-height: 200px;
+        overflow: auto;
+    }
+
+    button {
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+
+    button:hover {
+        background-color: #45a049;
+    }
+
+    .unit-conversion-button {
+        display: inline-block;
+        background-color: #8cff69;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-size: 18px;
+        transition: background-color 0.3s;
+        margin-top: 20px;
+    }
+
+    .unit-conversion-button:hover {
+        background-color: #14ff47;
+    }
+
+    .conversion-button {
+        display: inline-block;
+        background-color: #1575b6;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-size: 18px;
+        transition: background-color 0.3s;
+        margin-top: 20px;
+    }
+</style>
+<a href="../サイト/desaku.html" class="conversion-button">サイトに戻る</a>
+
+</html>

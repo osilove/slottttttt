@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>オセロゲーム</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(8, 60px);
+            grid-template-rows: repeat(8, 60px);
+            gap: 2px;
+            background-color: #333;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .cell {
+            width: 60px;
+            height: 60px;
+            background-color: #2e7d32;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .cell:hover {
+            background-color: #388e3c;
+        }
+
+        .piece {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .black {
+            background-color: black;
+        }
+
+        .white {
+            background-color: white;
+        }
+
+        .hidden {
+            opacity: 0;
+        }
+
+        .animate-piece {
+            transform: scale(1.1);
+        }
+
+        .highlight {
+            background-color: rgba(255, 255, 0, 0.6); /* 黄色のハイライト */
+        }
+
+        #status {
+            margin-top: 20px;
+            font-size: 18px;
+            text-align: center;
+        }
+        
+        .valid-move {
+    background-color: rgba(0, 255, 0, 0.5);  /* 薄い緑色でハイライト */
+}
+
+    </style>
+</head>
+
+<body>
+    <div id="game-board"></div>
+    <div id="status"></div>
+    <script>
+        const boardSize = 8;
+        let currentPlayer = 'black';
+        let board = [];
+        let lastMove = null; // 追加: 最後に置かれた場所
+
+        // ゲームボードを作成する
+        function createBoard() {
+            const boardElement = document.getElementById('game-board');
+            boardElement.innerHTML = '';
+
+            for (let row = 0; row < boardSize; row++) {
+                board[row] = [];
+                for (let col = 0; col < boardSize; col++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    cell.addEventListener('click', handleCellClick);
+                    boardElement.appendChild(cell);
+                    board[row][col] = null;  // セルを初期化
+                }
+            }
+
+            // 初期のオセロの配置
+            const center = Math.floor(boardSize / 2) - 1;
+            board[center][center] = 'white';
+            board[center][center + 1] = 'black';
+            board[center + 1][center] = 'black';
+            board[center + 1][center + 1] = 'white';
+            renderBoard();
+        }
+
+        // セルに石を置く処理
+        function placePiece(row, col, player) {
+            board[row][col] = player;
+            flipPieces(row, col, player); // 反転処理
+            lastMove = { row, col }; // 追加: 最後の手を記録
+            renderBoard();
+            togglePlayer();
+        }
+
+        // プレイヤーのターンを切り替える
+        function togglePlayer() {
+            currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+            updateStatus();
+        }
+
+        // プレイヤーターンの表示
+        function updateStatus() {
+            const statusElement = document.getElementById('status');
+            statusElement.innerText = `${currentPlayer === 'black' ? '黒' : '白'}の番です`;
+        }
+
+        // ボードを再描画
+        function renderBoard() {
+            const boardElement = document.getElementById('game-board');
+            const cells = boardElement.querySelectorAll('.cell');
+
+            cells.forEach(cell => {
+                const row = cell.dataset.row;
+                const col = cell.dataset.col;
+                const piece = board[row][col];
+
+                const pieceElement = cell.querySelector('.piece');
+                if (pieceElement) {
+                    pieceElement.remove();
+                }
+
+                if (piece) {
+                    const newPiece = document.createElement('div');
+                    newPiece.classList.add('piece', piece);
+                    newPiece.classList.add('animate-piece');
+                    cell.appendChild(newPiece);
+
+                    // アニメーション後に拡大効果を取り除く
+                    setTimeout(() => {
+                        newPiece.classList.remove('animate-piece');
+                    }, 300);
+                }
+
+                // 最後に置かれた場所をハイライト
+                if (lastMove && lastMove.row == row && lastMove.col == col) {
+                    cell.classList.add('highlight');
+                } else {
+                    cell.classList.remove('highlight');
+                }
+            });
+        }
+
+        // 反転する石を確認
+function flipPieces(row, col, player) {
+    const opponent = player === 'black' ? 'white' : 'black';
+    const directions = [
+        [-1, 0],  // 上
+        [1, 0],   // 下
+        [0, -1],  // 左
+        [0, 1],   // 右
+        [-1, -1], // 左上
+        [-1, 1],  // 右上
+        [1, -1],  // 左下
+        [1, 1]    // 右下
+    ];
+
+    directions.forEach(([dx, dy]) => {
+        let x = parseInt(row) + dx;
+        let y = parseInt(col) + dy;
+        let flip = [];
+
+        // 相手の石が続いている間、座標を記録
+        while (x >= 0 && x < boardSize && y >= 0 && y < boardSize && board[x][y] === opponent) {
+            flip.push([x, y]);
+            x += dx;
+            y += dy;
+        }
+
+        // 最終的に自分の石で挟んでいる場合だけ反転
+        if (x >= 0 && x < boardSize && y >= 0 && y < boardSize && board[x][y] === player) {
+            flip.forEach(([fx, fy]) => {
+                board[fx][fy] = player;  // 石を反転
+            });
+        }
+    });
+}
+
+function handleCellClick(event) {
+    const row = event.target.dataset.row;
+    const col = event.target.dataset.col;
+
+    // 置ける場所でない場合は何もしない
+    if (board[row][col] !== null || !canPlacePiece(row, col, currentPlayer)) {
+        return;
+    }
+
+    placePiece(row, col, currentPlayer);
+
+    // 次のターンで置ける場所があるか確認
+    if (!hasValidMoves(currentPlayer)) {
+        togglePlayer(); // 相手にターンを渡す
+
+        if (!hasValidMoves(currentPlayer)) {
+            checkGameOver(); // 両方とも置けない場合はゲーム終了
+        } else {
+            alert(`${currentPlayer === 'black' ? '黒' : '白'}は置ける場所がありません。再度手番を行います。`);
+        }
+    }
+}
+
+
+        // 石を置ける場所があるか確認
+        function hasValidMoves(player) {
+            for (let row = 0; row < boardSize; row++) {
+                for (let col = 0; col < boardSize; col++) {
+                    if (canPlacePiece(row, col, player)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function canPlacePiece(row, col, player) {
+    if (board[row][col] !== null) return false; // 既に石がある場合は無効
+
+    const opponent = player === 'black' ? 'white' : 'black';
+    const directions = [
+        [-1, 0], [1, 0], [0, -1], [0, 1], // 上、下、左、右
+        [-1, -1], [-1, 1], [1, -1], [1, 1] // 左上、右上、左下、右下
+    ];
+
+    return directions.some(([dx, dy]) => {
+        let x = parseInt(row) + dx;
+        let y = parseInt(col) + dy;
+        let hasOpponent = false;
+
+        // 相手の石が続くかどうか確認
+        while (x >= 0 && x < boardSize && y >= 0 && y < boardSize && board[x][y] === opponent) {
+            hasOpponent = true;
+            x += dx;
+            y += dy;
+        }
+
+        // 最後に自分の石があり、相手の石を挟んでいる場合のみ有効
+        if (hasOpponent && x >= 0 && x < boardSize && y >= 0 && y < boardSize && board[x][y] === player) {
+            return true; // 反転可能な場所として認識
+        }
+        return false; // 反転できない
+    });
+}
+
+// ボードを再描画
+function renderBoard() {
+    const boardElement = document.getElementById('game-board');
+    const cells = boardElement.querySelectorAll('.cell');
+    
+    cells.forEach(cell => {
+        const row = cell.dataset.row;
+        const col = cell.dataset.col;
+        const piece = board[row][col];
+        
+        const pieceElement = cell.querySelector('.piece');
+        if (pieceElement) {
+            pieceElement.remove();
+        }
+
+        // 置ける場所をハイライト
+        if (canPlacePiece(row, col, currentPlayer)) {
+            cell.classList.add('valid-move'); // 置ける場所にクラスを追加
+        } else {
+            cell.classList.remove('valid-move'); // 置けない場所からはクラスを削除
+        }
+
+        // 石が置かれていれば表示
+        if (piece) {
+            const newPiece = document.createElement('div');
+            newPiece.classList.add('piece', piece);
+            newPiece.classList.add('animate-piece');
+            cell.appendChild(newPiece);
+
+            // アニメーション後に拡大効果を取り除く
+            setTimeout(() => {
+                newPiece.classList.remove('animate-piece');
+            }, 300);
+        }
+    });
+}
+
+
+        // 勝利判定
+        function checkGameOver() {
+            let blackCount = 0;
+            let whiteCount = 0;
+
+            board.forEach(row => {
+                row.forEach(cell => {
+                    if (cell === 'black') blackCount++;
+                    if (cell === 'white') whiteCount++;
+                });
+            });
+
+            const statusElement = document.getElementById('status');
+            if (blackCount > whiteCount) {
+                statusElement.innerText = `ゲーム終了！黒の勝ち (${blackCount} 対 ${whiteCount})`;
+            } else if (whiteCount > blackCount) {
+                statusElement.innerText = `ゲーム終了！白の勝ち (${whiteCount} 対 ${blackCount})`;
+            } else {
+                statusElement.innerText = `ゲーム終了！引き分け (${blackCount} 対 ${whiteCount})`;
+            }
+        }
+
+        // ゲーム初期化
+        createBoard();
+        updateStatus();
+         // ESCキーでサイトに戻る
+         window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = "../サイト/desaku.html";
+            }
+        });
+    </script>
+
+</body>
+
+</html>
