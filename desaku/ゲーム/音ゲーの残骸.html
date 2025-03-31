@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音ゲー</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+        #result {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            color: yellow;
+            text-shadow: 2px 2px 5px #000;
+            display: none;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="result"></div>
+    <div id="score">Score: 0</div>
+
+
+    <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const resultDiv = document.getElementById("result");
+    const scoreDiv = document.getElementById("score");
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+
+    // 🎵 BGMを設定
+    const bgm = new Audio("01-THE BLUE.mp3");
+    bgm.loop = true; // ループ再生
+    bgm.volume = 0.1; // 音量調整
+
+    let isBgmStarted = false; // BGMが開始されたかのフラグ
+
+    function startBGM() {
+        if (!isBgmStarted) {
+            bgm.play().catch(error => console.log("BGMの自動再生に失敗:", error));
+            isBgmStarted = true;
+        }
+    }
+
+    let notes = [];
+    const noteSpeed = 5;
+    const noteWidth = 100;
+    const noteHeight = 10;
+    const targetY = canvasHeight - 100;
+    const targetHeight = 20;
+
+    let score = 0;
+    let isSpacePressed = false;
+
+    function createNote() {
+        const isLongNote = Math.random() < 0.3;
+        const note = {
+            x: Math.random() * (canvasWidth - noteWidth),
+            y: 0,
+            hit: false,
+            isLong: isLongNote,
+            length: isLongNote ? Math.random() * 200 + 50 : 0,
+            active: false
+        };
+        notes.push(note);
+    }
+
+    function drawNotes() {
+        notes.forEach(note => {
+            ctx.fillStyle = note.isLong ? (note.active ? "lime" : "green") : "red";
+            ctx.fillRect(note.x, note.y, noteWidth, noteHeight + (note.isLong ? note.length : 0));
+        });
+    }
+
+    function drawTargetLine() {
+        ctx.fillStyle = "blue";
+        ctx.fillRect(0, targetY, canvasWidth, targetHeight);
+    }
+
+    function moveNotes() {
+        notes.forEach(note => {
+            note.y += noteSpeed;
+        });
+        notes = notes.filter(note => note.y <= canvasHeight);
+    }
+
+    function checkHit() {
+        notes.forEach(note => {
+            if (!note.hit) {
+                if (note.isLong) {
+                    if (note.y <= targetY + targetHeight && note.y + note.length >= targetY) {
+                        note.active = true;
+                        if (isSpacePressed) {
+                            score += 0.1;
+                            scoreDiv.textContent = `Score: ${Math.floor(score)}`;
+                        }
+                    } else {
+                        note.active = false;
+                    }
+                } else {
+                    if (note.y + noteHeight >= targetY && note.y <= targetY + targetHeight) {
+                        note.hit = true;
+                        resultDiv.textContent = "Good!";
+                        resultDiv.style.display = "block";
+                        setTimeout(() => {
+                            resultDiv.style.display = "none";
+                        }, 500);
+                        score++;
+                        scoreDiv.textContent = `Score: ${score}`;
+                    }
+                }
+            }
+        });
+    }
+
+    function releaseLongNotes() {
+        notes.forEach(note => {
+            if (note.isLong && note.active) {
+                note.hit = true;
+                note.active = false;
+                resultDiv.textContent = "Good (Long Note)!";
+                resultDiv.style.display = "block";
+                setTimeout(() => {
+                    resultDiv.style.display = "none";
+                }, 500);
+            }
+        });
+    }
+
+    function gameLoop() {
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        drawNotes();
+        drawTargetLine();
+        moveNotes();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function startNoteGeneration() {
+        setInterval(createNote, 1000);
+    }
+
+    // 🎮 ユーザー操作でBGMを再生する
+    window.addEventListener("keydown", (e) => {
+        startBGM(); // キーを押したらBGM開始
+        if (e.code === "Space") {
+            isSpacePressed = true;
+            checkHit();
+        }
+    });
+
+    window.addEventListener("click", startBGM); // クリック時にBGM再生
+
+    window.addEventListener("keyup", (e) => {
+        if (e.code === "Space") {
+            isSpacePressed = false;
+            releaseLongNotes();
+        }
+    });
+
+    startNoteGeneration();
+    gameLoop();
+</script>
+
+</body>
+</html>

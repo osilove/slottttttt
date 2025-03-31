@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>○○を超えたら負けのゲーム</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="settings" class="settings-container">
+    <h1>ゲーム設定</h1>
+    <label for="player1-name">Player 1の名前:</label>
+    <input type="text" id="player1-name">
+    <label for="player2-name">Player 2の名前:</label>
+    <input type="text" id="player2-name">
+    
+    <label for="max-players">最大プレイヤー数:</label>
+    <select id="max-players">
+      <option value="2">2人</option>
+      <option value="3">3人</option>
+      <option value="4">4人</option>
+      <option value="5">5人</option>
+      <option value="6">6人</option>
+    </select>
+
+    <label for="max-number">ゲームの最大数:</label>
+    <input type="number" id="max-number" value="30">
+
+    <label for="special-rules">特殊ルールを使用する:</label>
+    <input type="checkbox" id="special-rules">
+
+    <button id="start-game">ゲーム開始</button>
+  </div>
+
+  <div id="game" class="game-container" style="display: none;">
+    <h1 id="game-title">30を超えたら負けのゲーム</h1> <!-- タイトルを動的に変更 -->
+    <p>現在の合計: <span id="total">0</span></p>
+    <div id="options">
+      <button class="option" data-value="1">1</button>
+      <button class="option" data-value="2">2</button>
+      <button class="option" data-value="3">3</button>
+    </div>
+    <div id="negative-buttons-container" style="display: none;">
+      <button id="negative-button">マイナスボタン</button>
+      <p>残り回数: <span id="negative-count">3</span></p>
+    </div>
+    <p id="turn">現在のターン: <span id="current-player">Player 1</span></p>
+    <p id="result"></p>
+    <button id="restart-button" style="display: none;">スタートに戻る</button>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

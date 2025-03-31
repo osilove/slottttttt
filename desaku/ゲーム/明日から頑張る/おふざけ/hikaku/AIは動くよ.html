@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>○○を超えたら負けのゲーム</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f9f9f9;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .game-container {
+      max-width: 400px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+    }
+
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 18px;
+      cursor: pointer;
+      border: 2px solid #333;
+      background: #ddd;
+      border-radius: 5px;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    h1 {
+      font-size: 24px;
+    }
+
+    p {
+      font-size: 18px;
+    }
+
+    .settings-container {
+      text-align: center;
+    }
+
+    .settings-container label {
+      display: block;
+      margin-top: 10px;
+    }
+
+    .settings-container input,
+    .settings-container select {
+      padding: 5px;
+      margin-top: 5px;
+      font-size: 16px;
+    }
+
+    .option.negative {
+      background-color: #ff6347;
+      color: white;
+      font-weight: bold;
+    }
+
+    #negative-count {
+      margin-top: 10px;
+    }
+
+    #player-limit-warning, #insufficient-players-warning {
+      color: red;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="settings" class="settings-container">
+    <h1>ゲーム設定</h1>
+    <label for="max-players">プレイヤー数 (1～6):</label>
+    <select id="max-players">
+      <option value="1">1人</option>
+      <option value="2">2人</option>
+      <option value="3">3人</option>
+      <option value="4">4人</option>
+      <option value="5">5人</option>
+      <option value="6">6人</option>
+    </select>
+
+    <div id="player-names-container">
+      <label for="player1-name">Player 1の名前:</label>
+      <input type="text" id="player1-name">
+    </div>
+
+    <label for="ai-players">AIプレイヤー数 (0～5):</label>
+    <input type="number" id="ai-players" min="0" max="5" value="1">
+
+    <label for="max-number">ゲームの最大数:</label>
+    <input type="number" id="max-number" value="30" min="30">
+
+    <label for="special-rules">特殊ルールを使用する:</label>
+    <input type="checkbox" id="special-rules">
+
+    <!-- 警告メッセージ -->
+    <div id="player-limit-warning">プレイヤー数が多すぎます！最大6人までです。</div>
+    <div id="insufficient-players-warning">プレイヤー数が少なすぎます！2人以上必要です。</div>
+
+    <button id="start-game">ゲーム開始</button>
+  </div>
+
+  <div id="game" class="game-container" style="display: none;">
+    <h1 id="game-title">30を超えたら負けのゲーム</h1>
+    <p>現在の合計: <span id="total">0</span></p>
+    <div id="options">
+      <button class="option" data-value="1">1</button>
+      <button class="option" data-value="2">2</button>
+      <button class="option" data-value="3">3</button>
+      <button class="option negative" id="negative-button" data-value="-1">マイナスボタン</button>
+    </div>
+    <p id="negative-count" style="display: none;">残り回数: 3</p>
+    <p id="turn">現在のターン: <span id="current-player">Player 1</span></p>
+    <p id="result"></p>
+    <button id="restart-button">スタートに戻る</button>
+  </div>
+
+  <script>
+    let total = 0;
+    let currentPlayer = 1;
+    let maxPlayers = 1;
+    let aiPlayers = 1; // AIの初期値
+    let maxNumber = 30;  // ゲームの最大数
+    let specialRulesEnabled = false;
+    let playerNames = [];
+    let negativeMovesRemaining = []; // プレイヤーおよびAIごとのマイナス回数を管理
+    let aiTurn = false;  // AIターンを管理
+
+    const totalDisplay = document.getElementById('total');
+    const turnDisplay = document.getElementById('current-player');
+    const resultDisplay = document.getElementById('result');
+    const startButton = document.getElementById('start-game');
+    const settingsForm = document.getElementById('settings');
+    const gameContainer = document.getElementById('game');
+    const restartButton = document.getElementById('restart-button');
+    const maxNumberInput = document.getElementById('max-number');
+    const playerLimitWarning = document.getElementById('player-limit-warning');
+    const insufficientPlayersWarning = document.getElementById('insufficient-players-warning');
+    const maxPlayersInput = document.getElementById('max-players');
+    const aiPlayersInput = document.getElementById('ai-players');
+    const negativeButtons = document.querySelectorAll('.option.negative');
+    const player1Input = document.getElementById('player1-name');
+    const playerNamesContainer = document.getElementById('player-names-container');
+    const allButtons = document.querySelectorAll('.option'); // すべてのボタンを取得
+    const negativeCountDisplay = document.getElementById('negative-count'); // 残り回数の表示部分
+
+    // プレイヤー数を変更したときに名前入力フィールドを動的に追加/削除
+    maxPlayersInput.addEventListener('change', updatePlayerNameFields);
+
+    // プレイヤー数に応じて名前入力フィールドを更新
+    function updatePlayerNameFields() {
+      const numberOfPlayers = parseInt(maxPlayersInput.value, 10);
+      playerNamesContainer.innerHTML = '';
+
+      for (let i = 0; i < numberOfPlayers; i++) {
+        const playerInput = document.createElement('input');
+        playerInput.type = 'text';
+        playerInput.id = `player${i + 1}-name`;
+        playerInput.placeholder = `Player ${i + 1}の名前`;
+        playerNamesContainer.appendChild(playerInput);
+      }
+    }
+
+    // プレイヤー設定のバリデーション
+    function validatePlayerSettings() {
+      const totalPlayers = parseInt(maxPlayersInput.value, 10) + parseInt(aiPlayersInput.value, 10);
+
+      if (totalPlayers > 6) {
+        playerLimitWarning.style.display = 'block';
+        return false;
+      } else {
+        playerLimitWarning.style.display = 'none';
+      }
+
+      if (totalPlayers < 2) {
+        insufficientPlayersWarning.style.display = 'block';
+        return false;
+      } else {
+        insufficientPlayersWarning.style.display = 'none';
+      }
+
+      return true;
+    }
+
+    aiPlayersInput.addEventListener('input', validatePlayerSettings);
+
+    startButton.addEventListener('click', () => {
+      if (!validatePlayerSettings()) {
+        alert('設定を確認してください。');
+        return;
+      }
+
+      maxPlayers = parseInt(maxPlayersInput.value, 10);
+      aiPlayers = parseInt(aiPlayersInput.value, 10);
+      maxNumber = parseInt(maxNumberInput.value, 10);
+
+      playerNames = [];
+      for (let i = 0; i < maxPlayers; i++) {
+        const playerNameInput = document.getElementById(`player${i + 1}-name`);
+        playerNames.push(playerNameInput.value.trim() || `Player ${i + 1}`);
+      }
+
+      negativeMovesRemaining = new Array(playerNames.length).fill(3); // 初期設定で各プレイヤー/AIに3回のマイナス回数
+
+      document.getElementById('game-title').textContent = `${maxNumber} を超えたら負けのゲーム`;
+
+      specialRulesEnabled = document.getElementById('special-rules').checked;
+
+      settingsForm.style.display = 'none';
+      gameContainer.style.display = 'block';
+      resetGame();
+      updateButtons();
+    });
+
+    // スタートに戻るボタンのクリックイベント
+    restartButton.addEventListener('click', () => {
+      resetGame();
+      settingsForm.style.display = 'block';
+      gameContainer.style.display = 'none';
+    });
+
+    // ゲームのリセット
+    function resetGame() {
+      total = 0;
+      currentPlayer = 1;
+      negativeMovesRemaining = new Array(playerNames.length).fill(3); // 各プレイヤーおよびAIのマイナス回数をリセット
+      totalDisplay.textContent = total;
+      resultDisplay.textContent = '';
+      updateTurn();
+      updateButtons();
+    }
+
+    // 現在のターン情報を更新
+    function updateTurn() {
+      turnDisplay.textContent = `${playerNames[currentPlayer - 1]} のターン`;
+      updateNegativeCountDisplay(); // 残り回数を更新
+    }
+
+    // ボタンの更新
+    function updateButtons() {
+      allButtons.forEach(button => {
+        const value = parseInt(button.getAttribute('data-value'), 10);
+
+        // 現在の合計が3未満のとき、マイナスボタンを無効化
+        if (total < 3) {
+          document.getElementById('negative-button').disabled = true;
+        } else {
+          document.getElementById('negative-button').disabled = false;
+        }
+
+        // 1, 2, 3のボタンが押せるようにする
+        button.disabled = total + value > maxNumber || (value < 0 && negativeMovesRemaining[currentPlayer - 1] <= 0);
+
+        // 特殊ルールが無効ならマイナスボタンを非表示
+        if (value < 0) {
+          button.style.display = specialRulesEnabled ? 'inline-block' : 'none';
+        } else {
+          button.style.display = 'inline-block';
+        }
+      });
+    }
+
+    // 残り回数を表示/非表示
+    function updateNegativeCountDisplay() {
+      if (specialRulesEnabled) {
+        negativeCountDisplay.style.display = 'inline-block';
+        negativeCountDisplay.textContent = `残り回数: ${negativeMovesRemaining[currentPlayer - 1]}`;
+      } else {
+        negativeCountDisplay.style.display = 'none'; // 特殊ルールが無効な場合、非表示
+      }
+    }
+
+    // クリックイベントの設定
+    allButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const value = parseInt(button.getAttribute('data-value'), 10);
+
+        if (total + value > maxNumber) {
+          resultDisplay.textContent = `${playerNames[currentPlayer - 1]}が負けました！`;
+          updateButtons();
+        } else {
+          total += value;
+          totalDisplay.textContent = total;
+
+          // 次のターンへ
+          currentPlayer = (currentPlayer % (maxPlayers + aiPlayers)) + 1;
+          updateTurn();
+          aiTurn = currentPlayer > maxPlayers;  // AIのターン判定
+          updateButtons();
+        }
+      });
+    });
+
+    // マイナスボタンの処理
+    document.getElementById('negative-button').addEventListener('click', () => {
+      const inputValue = prompt("使用するマイナス値を入力してください (-1 または -2):");
+
+      if (inputValue === "-1" || inputValue === "-2") {
+        if (negativeMovesRemaining[currentPlayer - 1] > 0) {
+          total += parseInt(inputValue, 10);  // 合計にマイナスを適用
+          totalDisplay.textContent = total;
+
+          negativeMovesRemaining[currentPlayer - 1]--;  // 残り回数を減らす
+          updateNegativeCountDisplay();  // 残り回数の表示を更新
+          
+          if (total >= maxNumber) {
+            resultDisplay.textContent = `${playerNames[currentPlayer - 1]}が負けました！`;
+            updateButtons();
+          } else {
+            currentPlayer = (currentPlayer % (maxPlayers + aiPlayers)) + 1;
+            updateTurn();
+            aiTurn = currentPlayer > maxPlayers;  // AIのターン判定
+            updateButtons();
+          }
+        }
+      }
+    });
+
+    // AIターンの処理を追加
+    function aiTurnFunction() {
+      if (aiTurn) {
+        const aiChoice = Math.floor(Math.random() * 3) + 1; // 1, 2, 3のランダムな選択
+        total += aiChoice;
+        totalDisplay.textContent = total;
+
+        if (total >= maxNumber) {
+          resultDisplay.textContent = `AIが負けました！`;
+          updateButtons();
+        } else {
+          currentPlayer = (currentPlayer % (maxPlayers + aiPlayers)) + 1;
+          updateTurn();
+          aiTurn = currentPlayer > maxPlayers; // AIターンの判定
+          updateButtons();
+        }
+      }
+    }
+
+    // ゲームの進行時にAIターンを実行
+    setInterval(aiTurnFunction, 1000); // 1秒ごとにAIターンを実行
+  </script>
+</body>
+</html>

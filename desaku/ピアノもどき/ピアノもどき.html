@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ピアノ</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    .key {
+      display: inline-block;
+      width: 60px;
+      height: 200px;
+      margin: 5px;
+      background-color: white;
+      border: 1px solid black;
+      border-radius: 5px;
+      box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+      line-height: 200px;
+      font-size: 24px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .key:active {
+      background-color: lightgray;
+    }
+    #instructions {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <h1></h1>
+  <div id="piano">
+    <div class="key" data-note="261.63">ド(1)</div> <!-- ド (C4) -->
+    <div class="key" data-note="293.66">レ(2)</div> <!-- レ (D4) -->
+    <div class="key" data-note="329.63">ミ(3)</div> <!-- ミ (E4) -->
+    <div class="key" data-note="349.23">フ(4)</div> <!-- ファ (F4) -->
+    <div class="key" data-note="392.00">ソ(5)</div> <!-- ソ (G4) -->
+    <div class="key" data-note="440.00">ラ(6)</div> <!-- ラ (A4) -->
+    <div class="key" data-note="493.88">シ(7)</div> <!-- シ (B4) -->
+    <div class="key" data-note="523.25">ド(8)</div> <!-- ド (C5) -->
+  </div>
+  <div id="instructions">キーボードの1～8を押して演奏できます。</div>
+
+  <script>
+    // オーディオコンテキストの初期化
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // 音を再生する関数
+    function playNote(frequency) {
+      const oscillator = audioCtx.createOscillator(); // オシレーター作成
+      const gainNode = audioCtx.createGain(); // 音量制御ノード作成
+
+      oscillator.type = 'sine'; // 波形の種類（正弦波）
+      oscillator.frequency.value = frequency; // 周波数を設定
+      oscillator.connect(gainNode); // オシレーターを音量制御ノードに接続
+      gainNode.connect(audioCtx.destination); // 音量制御ノードを出力に接続
+
+      // 音を鳴らす
+      oscillator.start();
+      gainNode.gain.setValueAtTime(1, audioCtx.currentTime); // 音量を1に
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5); // 徐々に音量を下げる
+      oscillator.stop(audioCtx.currentTime + 0.5); // 0.5秒後に停止
+    }
+
+    // マウスクリックで音を鳴らす
+    document.querySelectorAll('.key').forEach(key => {
+      key.addEventListener('click', () => {
+        const note = key.getAttribute('data-note');
+        playNote(parseFloat(note));
+      });
+    });
+
+    // キーボード入力で音を鳴らす
+    document.addEventListener('keydown', (event) => {
+      const key = event.key;
+      const noteMap = {
+        '1': 261.63, // ド
+        '2': 293.66, // レ
+        '3': 329.63, // ミ
+        '4': 349.23, // ファ
+        '5': 392.00, // ソ
+        '6': 440.00, // ラ
+        '7': 493.88, // シ
+        '8': 523.25  // ド（高い）
+      };
+      if (noteMap[key]) {
+        playNote(noteMap[key]);
+      }
+    });
+       // ESCキーでサイトに戻る
+       window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = "../サイト/desaku.html";  // 戻る先のURLに変更
+            }
+        });
+  </script>
+</body>
+</html>

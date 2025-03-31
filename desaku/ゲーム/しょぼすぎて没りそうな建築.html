@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ドット配置ゲーム</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #87CEEB;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            cursor: pointer;
+        }
+
+        .block {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: #8B4513;
+            border: 1px solid #5C3317;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameCanvas"></div>
+
+    <script>
+        const gameCanvas = document.getElementById('gameCanvas');
+
+        // クリックした場所にブロックを追加する関数
+        gameCanvas.addEventListener('click', (event) => {
+            // クリックした要素がブロックの場合は削除
+            if (event.target.classList.contains('block')) {
+                event.target.remove();
+                return;
+            }
+
+            // 新しいブロックを作成
+            const block = document.createElement('div');
+            block.className = 'block';
+
+            // ブロックの位置を計算
+            const blockX = Math.floor(event.clientX / 50) * 50;
+            const blockY = Math.floor(event.clientY / 50) * 50;
+
+            block.style.left = blockX + 'px';
+            block.style.top = blockY + 'px';
+
+            gameCanvas.appendChild(block);
+        });
+    </script>
+</body>
+</html>

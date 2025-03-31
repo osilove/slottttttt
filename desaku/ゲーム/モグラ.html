@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>モグラ探しゲーム</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+    #game-container {
+      display: grid;
+      grid-template-columns: repeat(30, 20px);
+      grid-gap: 2px;
+      justify-content: center;
+      margin: 20px auto;
+    }
+    .tile {
+      width: 20px;
+      height: 20px;
+      background-color: #8bde7b;
+      border: 1px solid #5a9e4b;
+      cursor: pointer;
+    }
+    .tile.open {
+      background-color: #fff;
+    }
+    .tile.mole {
+      background-color: #ffcc00;
+    }
+    #message {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <h1>モグラ探しゲーム</h1>
+  <p>30匹のモグラをすべて見つけよう！</p>
+  <div id="game-container"></div>
+  <div id="message">見つけたモグラ: 0 / 30</div>
+  <script>
+    const gameContainer = document.getElementById("game-container");
+    const message = document.getElementById("message");
+    const rows = 30;
+    const cols = 30;
+    const totalMoles = 30;
+    let foundMoles = 0;
+
+    // 30匹のモグラをランダムに配置
+    const molePositions = new Set();
+    while (molePositions.size < totalMoles) {
+      molePositions.add(Math.floor(Math.random() * rows * cols));
+    }
+
+    // タイルを生成
+    for (let i = 0; i < rows * cols; i++) {
+      const tile = document.createElement("div");
+      tile.classList.add("tile");
+      tile.dataset.index = i;
+
+      // タイルクリック時の処理
+      tile.addEventListener("click", () => {
+        if (tile.classList.contains("open")) return;
+
+        tile.classList.add("open");
+        if (molePositions.has(i)) {
+          tile.classList.add("mole");
+          foundMoles++;
+          message.textContent = `見つけたモグラ: ${foundMoles} / ${totalMoles}`;
+
+          if (foundMoles === totalMoles) {
+            message.textContent = "すべてのモグラを発見！おめでとう！";
+          }
+        }
+      });
+
+      gameContainer.appendChild(tile);
+    }
+  </script>
+</body>
+</html>

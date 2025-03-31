@@ -1,0 +1,65 @@
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background-color: #f9f9f9;
+  color: #333;
+  margin: 0;
+  padding: 20px;
+}
+
+.game-container {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 20px;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+button {
+  margin: 10px;
+  padding: 10px 20px;
+  font-size: 18px;
+  cursor: pointer;
+  border: 2px solid #333;
+  background: #ddd;
+  border-radius: 5px;
+}
+
+button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+h1 {
+  font-size: 24px;
+}
+
+p {
+  font-size: 18px;
+}
+
+.settings-container {
+  text-align: center;
+}
+
+.settings-container label {
+  display: block;
+  margin-top: 10px;
+}
+
+.settings-container input,
+.settings-container select {
+  padding: 5px;
+  margin-top: 5px;
+  font-size: 16px;
+}
+
+#negative-buttons-container {
+  margin-top: 20px;
+}
+
+#negative-button {
+  background-color: #ff6347;
+  color: white;
+}

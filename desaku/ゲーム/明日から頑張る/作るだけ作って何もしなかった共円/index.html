@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>共円ゲーム</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>共円ゲーム</h1>
+    <p>交互にクリックして石を置きます。4点で円を形成したら負けです。</p>
+    <div>
+        <label for="board-size">盤面サイズ（4～32）: </label>
+        <input type="range" id="board-size" min="4" max="32" value="9">
+        <span id="board-size-value">9</span>
+        <button id="reset-game">初期化</button>
+    </div>
+    <div id="board"></div>
+    <p id="message"></p>
+    <script src="script.js"></script>
+</body>
+</html>
