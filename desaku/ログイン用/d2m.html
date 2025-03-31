@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>請求書管理</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            margin: 20px auto;
+            max-width: 600px;
+            text-align: center;
+        }
+        input, button, table, ul {
+            margin: 10px auto;
+            padding: 10px;
+            width: 80%;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            padding: 10px;
+            background-color: #f4f4f4;
+            margin: 5px 0;
+            cursor: pointer;
+        }
+        li:hover {
+            background-color: #ddd;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .hidden {
+            display: none;
+        }
+        @media (max-width: 768px) {
+            input, button, table, ul {
+                width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="loginContainer" class="container">
+        <h2>ログイン</h2>
+        <input type="text" id="loginUserName" placeholder="名前を入力">
+        <input type="password" id="loginPassword" placeholder="パスワードを入力">
+        <button id="loginBtn">ログイン</button>
+    </div>
+
+    <div id="invoiceContainer" class="container hidden">
+        <button id="logoutBtn">ログアウト</button>
+        <h2>請求書管理</h2>
+        <p id="welcomeMessage"></p>
+        <div>
+            <input type="text" id="userName" placeholder="名前を入力">
+            <input type="text" id="userID" placeholder="IDを入力">
+        </div>
+        <h3>商品情報</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>商品ID</th>
+                    <th>値段 (円)</th>
+                    <th>個数</th>
+                    <th>総計 (円)</th>
+                </tr>
+            </thead>
+            <tbody id="productTable">
+                <!-- 商品行が追加される -->
+            </tbody>
+        </table>
+        <div>
+            <input type="text" id="productID" placeholder="商品ID">
+            <input type="number" id="price" placeholder="値段 (円)">
+            <input type="number" id="quantity" placeholder="個数">
+            <button id="addProductBtn">商品を追加</button>
+            <button id="resetProductsBtn">リセット</button>
+        </div>
+        <h3>請求書</h3>
+        <p id="totalAmount">合計金額: 0 円</p>
+        <button id="saveInvoiceBtn">請求書を保存</button>
+        <ul id="invoiceList">
+            <!-- 請求書リストがここに表示される -->
+        </ul>
+    </div>
+
+    <script>
+        const loginContainer = document.getElementById("loginContainer");
+        const invoiceContainer = document.getElementById("invoiceContainer");
+        const loginBtn = document.getElementById("loginBtn");
+        const logoutBtn = document.getElementById("logoutBtn");
+        const welcomeMessage = document.getElementById("welcomeMessage");
+
+        const userNameInput = document.getElementById("userName");
+        const userIDInput = document.getElementById("userID");
+        const productTable = document.getElementById("productTable");
+        const addProductBtn = document.getElementById("addProductBtn");
+        const resetProductsBtn = document.getElementById("resetProductsBtn");
+        const totalAmountEl = document.getElementById("totalAmount");
+        const saveInvoiceBtn = document.getElementById("saveInvoiceBtn");
+        const invoiceList = document.getElementById("invoiceList");
+
+        let totalAmount = 0;
+        const products = [];
+        const invoicesKey = "invoices";
+        const authKey = "loggedIn";
+
+        // ログイン処理
+        loginBtn.addEventListener("click", () => {
+            const loginUserName = document.getElementById("loginUserName").value.trim();
+            const loginPassword = document.getElementById("loginPassword").value.trim();
+
+            if (loginUserName && loginPassword.length >= 4) {
+                const userID = Math.floor(100000 + Math.random() * 900000);
+                localStorage.setItem(authKey, JSON.stringify({ loginUserName, userID }));
+                toggleLoginState(true);
+                userNameInput.value = loginUserName;
+                userIDInput.value = userID;
+            } else {
+                alert("名前と4文字以上のパスワードを入力してください");
+            }
+        });
+
+        // ログアウト処理
+        logoutBtn.addEventListener("click", () => {
+            localStorage.removeItem(authKey);
+            toggleLoginState(false);
+        });
+
+        // ログイン状態の切り替え
+        function toggleLoginState(isLoggedIn) {
+            if (isLoggedIn) {
+                loginContainer.classList.add("hidden");
+                invoiceContainer.classList.remove("hidden");
+
+                const userData = JSON.parse(localStorage.getItem(authKey));
+                if (userData) {
+                    welcomeMessage.textContent = `ようこそ、${userData.loginUserName}さん`;
+                    userNameInput.value = userData.loginUserName;
+                    userIDInput.value = userData.userID;
+                }
+            } else {
+                loginContainer.classList.remove("hidden");
+                invoiceContainer.classList.add("hidden");
+            }
+        }
+
+        // 商品追加処理
+        addProductBtn.addEventListener("click", () => {
+            const productID = document.getElementById("productID").value.trim();
+            const price = parseFloat(document.getElementById("price").value);
+            const quantity = parseInt(document.getElementById("quantity").value);
+
+            if (productID && price > 0 && quantity > 0) {
+                const total = price * quantity;
+                totalAmount += total;
+
+                products.push({ productID, price, quantity, total });
+
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${productID}</td>
+                    <td>${price}</td>
+                    <td>${quantity}</td>
+                    <td>${total}</td>
+                `;
+                productTable.appendChild(row);
+
+                totalAmountEl.textContent = `合計金額: ${totalAmount} 円`;
+
+                document.getElementById("productID").value = "";
+                document.getElementById("price").value = "";
+                document.getElementById("quantity").value = "";
+            } else {
+                alert("正しい商品情報を入力してください");
+            }
+        });
+
+        // 商品リセット
+        resetProductsBtn.addEventListener("click", resetForm);
+
+        // 請求書保存
+        saveInvoiceBtn.addEventListener("click", () => {
+            const userName = userNameInput.value.trim();
+            const userID = userIDInput.value.trim();
+
+            if (!userName || !userID || products.length === 0) {
+                alert("名前、ID、または商品情報が不足しています");
+                return;
+            }
+
+            const invoices = JSON.parse(localStorage.getItem(invoicesKey)) || [];
+            const invoice = {
+                userName,
+                userID,
+                products: [...products],
+                totalAmount,
+            };
+
+            invoices.push(invoice);
+            localStorage.setItem(invoicesKey, JSON.stringify(invoices));
+            renderInvoices();
+            resetForm();
+        });
+
+        // 請求書リスト表示
+        function renderInvoices() {
+            const invoices = JSON.parse(localStorage.getItem(invoicesKey)) || [];
+            invoiceList.innerHTML = invoices
+                .map(
+                    (invoice, index) => `
+                <li data-index="${index}">
+                    ${invoice.userName} (ID: ${invoice.userID}) - 合計: ${invoice.totalAmount} 円
+                </li>
+            `
+                )
+                .join("");
+
+            // 削除機能追加
+            document.querySelectorAll("#invoiceList li").forEach((li) => {
+                li.addEventListener("click", () => {
+                    const index = li.dataset.index;
+                    invoices.splice(index, 1);
+                    localStorage.setItem(invoicesKey, JSON.stringify(invoices));
+                    renderInvoices();
+                });
+            });
+        }
+
+        // フォームリセット
+        function resetForm() {
+            productTable.innerHTML = "";
+            totalAmountEl.textContent = "合計金額: 0 円";
+            totalAmount = 0;
+            products.length = 0;
+        }
+
+        // 初期化
+        function init() {
+            const loggedIn = localStorage.getItem(authKey);
+            toggleLoginState(!!loggedIn);
+            renderInvoices();
+        }
+
+        window.addEventListener("load", init);
+    </script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>顧客情報管理</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            margin: 50px auto;
+            max-width: 600px;
+            text-align: center;
+        }
+        input, button, table {
+            margin: 10px auto;
+            padding: 10px;
+            width: 80%;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .editable {
+            cursor: pointer;
+            background-color: #f4f4f4;
+        }
+        .editable:hover {
+            background-color: #e4e4e4;
+        }
+        .add-btn {
+            margin-top: 20px;
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .delete-btn {
+            color: white;
+            background-color: red;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .delete-btn:hover {
+            background-color: darkred;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>顧客情報管理</h2>
+        <p>以下の表に顧客データを追加できます。クリックで編集可能です。</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>顧客名</th>
+                    <th>顧客ID</th>
+                    <th>メモ</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="customerTable">
+                <!-- 初期状態では空白のデータ -->
+            </tbody>
+        </table>
+        <button class="add-btn" id="addCustomerBtn">＋ データを追加</button>
+    </div>
+
+    <script>
+        const customerTable = document.getElementById("customerTable");
+        const addCustomerBtn = document.getElementById("addCustomerBtn");
+        const storageKey = "customerData"; // localStorage のキー名
+
+        // 新しい行を追加
+        function addCustomerRow(name = "", id = "", note = "") {
+            const row = document.createElement("tr");
+
+            // 顧客名セル
+            const nameCell = document.createElement("td");
+            nameCell.textContent = name || "クリックして入力";
+            nameCell.classList.add("editable");
+            nameCell.addEventListener("click", () => {
+                const newName = prompt("新しい顧客名を入力してください:", nameCell.textContent);
+                if (newName !== null && newName.trim() !== "") {
+                    nameCell.textContent = newName.trim();
+                    saveData();
+                }
+            });
+
+            // 顧客IDセル
+            const idCell = document.createElement("td");
+            idCell.textContent = id || "クリックして入力";
+            idCell.classList.add("editable");
+            idCell.addEventListener("click", () => {
+                const newID = prompt("新しい顧客IDを入力してください:", idCell.textContent);
+                if (newID !== null && newID.trim() !== "") {
+                    idCell.textContent = newID.trim();
+                    saveData();
+                }
+            });
+
+            // メモセル
+            const noteCell = document.createElement("td");
+            noteCell.textContent = note || "クリックして入力";
+            noteCell.classList.add("editable");
+            noteCell.addEventListener("click", () => {
+                const newNote = prompt("新しいメモを入力してください:", noteCell.textContent);
+                if (newNote !== null) {
+                    if (newNote.trim() === "") {
+                        const confirmDelete = confirm("メモを空白にすると、この行が削除されます。削除しますか？");
+                        if (confirmDelete) {
+                            row.remove();
+                            saveData();
+                        }
+                    } else {
+                        noteCell.textContent = newNote.trim();
+                        saveData();
+                    }
+                }
+            });
+
+            // 削除ボタンセル
+            const deleteCell = document.createElement("td");
+            const deleteButton = document.createElement("button");
+            deleteButton.textContent = "削除";
+            deleteButton.classList.add("delete-btn");
+            deleteButton.addEventListener("click", () => {
+                const confirmDelete = confirm("この行を削除しますか？");
+                if (confirmDelete) {
+                    row.remove();
+                    saveData();
+                }
+            });
+            deleteCell.appendChild(deleteButton);
+
+            row.appendChild(nameCell);
+            row.appendChild(idCell);
+            row.appendChild(noteCell);
+            row.appendChild(deleteCell);
+            customerTable.appendChild(row);
+        }
+
+        // データを localStorage に保存
+        function saveData() {
+            const rows = customerTable.querySelectorAll("tr");
+            const data = Array.from(rows).map(row => {
+                const cells = row.querySelectorAll("td");
+                return {
+                    name: cells[0].textContent.trim(),
+                    id: cells[1].textContent.trim(),
+                    note: cells[2].textContent.trim()
+                };
+            });
+            localStorage.setItem(storageKey, JSON.stringify(data));
+        }
+
+        // localStorage からデータを読み込む
+        function loadData() {
+            const data = JSON.parse(localStorage.getItem(storageKey) || "[]");
+            data.forEach(({ name, id, note }) => addCustomerRow(name, id, note));
+        }
+
+        // ボタンを押したとき新しい行を追加
+        addCustomerBtn.addEventListener("click", () => {
+            addCustomerRow();
+            saveData();
+        });
+
+        // 初期化
+        function init() {
+            loadData(); // 保存されたデータをロード
+            if (customerTable.rows.length === 0) {
+                addCustomerRow(); // 初期状態で1行追加
+            }
+        }
+
+        window.addEventListener("load", init);
+    </script>
+</body>
+</html>

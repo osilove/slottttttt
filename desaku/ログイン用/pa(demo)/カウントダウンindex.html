@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>修了認定試験</title>
+<style>
+h2 span {
+    font-size: 1rem;
+}
+.timer {
+    font-weight: bold;
+    font-size: 24px;
+    text-align: center;
+}
+.timer span {
+    font-size: 72px;
+}
+</style>
+</head>
+<body>
+    <header>
+    <div class="container">
+    <h1>科目Aカウントダウン</h1>
+    </div><!-- /.container -->
+    </header>
+    <main>
+    <div class="container">
+    <section>
+        <h2><span>指定の日時まで</span><br>
+        </h2>
+        <p class="timer">あと<span id="years"></span>年<span id="day"></span>日<span id="hour"></span>時間<span id="min"></span>分<span id="sec"></span>秒</p>
+    </section>
+    </div><!-- /.container -->
+    </main>
+    <footer>
+    <div class="container">
+    <p>頑張りましょう</p>
+    </div><!-- /.container -->
+    </footer>
+    <script>
+    'use strict';
+    function countdown(due) {
+        const now = new Date();
+        const rest = due.getTime() - now.getTime();
+        const sec = Math.floor(rest / 1000) % 60;
+        const min = Math.floor(rest / 1000 / 60) % 60;
+        const hours = Math.floor(rest / 1000 / 60 / 60) % 24;
+        let days = Math.floor(rest / 1000 / 60 / 60 / 24) % 365 ;
+        const years =due.getFullYear() - now.getFullYear();
+        const count = [years,days, hours, min, sec];
+    
+        const current_years = now.getFullYear();
+        if((current_years % 4 === 0 && current_years % 100 !== 0) || current_years % 400 === 0 ){
+                days += 1;
+            }
+        return count;
+    }
+    const goal = new Date(2024, 6, 9);
+    function recalc() {
+        const counter = countdown(goal);
+        document.getElementById('years').textContent = counter[0];
+        document.getElementById('day').textContent = counter[1];
+        document.getElementById('hour').textContent = counter[2];
+        document.getElementById('min').textContent = String(counter[3]).padStart(2, '0');
+        document.getElementById('sec').textContent = String(counter[4]).padStart(2, '0');
+        refresh();  
+    }
+    function refresh() {
+        setTimeout(recalc, 1000);
+    }
+    recalc();
+    </script>
+    </body>
+    </html>
+    

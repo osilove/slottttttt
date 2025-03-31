@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ログイン</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<header>
+<center>
+<h1>こんなん</h1>
+</center>
+</header>
+<style>
+header {
+position: fixed;
+color: white;
+width: 100%;
+height: 70px;
+background-color: #FF0000;
+}
+</style>
+<br><br><br>
+<body>
+<div>
+<!-- フォーム -->
+<form id="loginForm">
+<center>
+<h1 class="contact-title">ログイン</h1>
+<p>ID, パスワード</p>
+</center>
+<div>
+<center>
+<div>
+<input type="text" id="username" name="username" placeholder="ID" required>
+</div>
+<br>
+<div>
+<input type="password" id="password" name="password" placeholder="Password" required>
+</div>
+</center>
+</div>
+<button type="button" onClick="login()">認証</button>
+</form>
+
+<a href="userpassword.html">ゲストとしてログイン</a>
+<p></p>
+<p>続きから</p>
+       
+<a href="userpassword.html".html">再ログイン</a>
+
+<!-- ログイン処理 -->
+<script language="JavaScript" type="text/javascript">
+async function login() {
+const username = document.getElementById('username').value;
+const password = document.getElementById('password').value;
+
+const response = await fetch('http://localhost:3000/login', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json'
+},
+body: JSON.stringify({ username, password })
+});
+
+const result = await response.json();
+if (response.ok) {
+alert('Login successful');
+console.log('Token:', result.token);
+window.location.href = 'result.html';
+} else {
+alert('Login failed: ' + result.message);
+}
+}
+</script>
+</div>
+</body>
+</html>
