@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Layout</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header>
+        <img src="images/main-visual.jpg" alt="Access Top" class="header-image">
+        <nav id="mainNav">
+            <a href="index.html" id="logo">LOGO</a>
+            <a href="index.html" id="homeLink">HOME</a>
+            <a href="menu.html" id="menuLink">MENU</a>
+            <a href="access.html" id="accessLink">ACCESS</a>
+            <a href="access.html" id="contactLink">CONTACT</a>
+        </nav>
+    </header>
+    
+
+    <section class="concept">
+        <h2>JS2314_奥村大策</h2>
+        <h3>CONCEPT</h3>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+
+        <div class="slideshow-container">
+            <div class="slides" id="slideshow">
+                <div class="slide"><img src="images/slide_01.png" alt="Slide 1"></div>
+                <div class="slide"><img src="images/slide_02.png" alt="Slide 2"></div>
+                <div class="slide"><img src="images/slide_03.png" alt="Slide 3"></div>
+                <div class="slide"><img src="images/slide_04.png" alt="Slide 4"></div>
+                <div class="slide"><img src="images/slide_05.png" alt="Slide 5"></div>
+                <div class="slide"><img src="images/slide_06.png" alt="Slide 6"></div>
+                <div class="slide"><img src="images/slide_07.png" alt="Slide 7"></div>
+                <div class="slide"><img src="images/slide_08.png" alt="Slide 8"></div>
+                <div class="slide"><img src="images/slide_09.png" alt="Slide 9"></div>
+                <div class="slide"><img src="images/slide_10.png" alt="Slide 10"></div>
+            </div>
+        </div>
+</section>
+
+<div class="hamburger-menu" id="hamburgerMenu">
+    <div class="menu-icon" onclick="toggleMenu()">☰</div>
+    <nav class="menu-content">
+        <ul>
+        
+                <li><a href="index.html" id="homeLink">HOME</a></li> 
+                <li><a href="menu.html" id="menuLink">MENU</a></li> 
+                <li><a href="access.html" id="accessLink">ACCESS</a></li> 
+               <li><a href="access.html" id="contactLink">CONTACT</a></li> 
+        
+        </ul>
+    </nav>
+</div>
+
+        <div class="food-drink-section">
+            <div class="food-drink-item">
+                <h2>Food</h2>
+                <img src="images/food-01.jpg" alt="Food Image">
+                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit</p>
+            </div>
+            <div class="food-drink-item">
+                <h2>Food</h2>
+                <img src="images/food-02.jpg" alt="Food Image">
+                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit</p>
+            </div>
+         
+        </div>
+        
+        <div class="food-drink-section">
+        <div class="food-drink-item">
+            <h2>Drink</h2>
+            <img src="images/drink-01.jpg" alt="Drink Image">
+            <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit</p>
+        </div>
+        <div class="food-drink-item">
+            <h2>Drink</h2>
+            <img src="images/drink-02.jpg" alt="Drink Image">
+            <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit</p>
+        </div>
+    <div class="page-top" onclick="scrollToTop()">TOP</div>
+
+    <footer>
+        LOGO | HOME | MENU | ACCESS | CONTACT
+    </footer>
+
+    <script src="js/script.js"></script>
+
+</body>
+</html>
