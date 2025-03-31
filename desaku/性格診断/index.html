@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>性格診断</title>
+</head>
+<body>
+    <h1>性格診断</h1>
+    <p>この診断では、あなたの性格を知るための質問をします。</p>
+    <a href="pptx/question1.html">診断を始める</a>
+    <div id="icon">
+        <img class="ic" id="ic1" src="pptx/img/s.png" >
+        <img class="ic" id="ic2" src="pptx/img/i.png" >
+        <img class="ic" id="ic3" src="pptx/img/b.png" >
+    </div>
+    <a href="../サイト/desaku.html" class="link-button">サイトに戻る</a>
+</body>
+<script> // ESCキーでサイトに戻る
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            window.location.href = "../サイト/desaku.html";
+        }
+    });</script>
+</html>

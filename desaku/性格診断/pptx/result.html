@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>診断結果</title>
+    <script src="main.js"></script>
+</head>
+<body>
+    <h1>診断結果</h1>
+    <div id="resultText"></div>
+    <img id="resultImage" src="" alt="" style="max-width: 300px; display: none;">
+
+    <script>
+        const score = getScore(); 
+        let resultText;
+        let imageUrl;
+
+        if (score >= 3) {
+            resultText = "あなたは銀狼に近い性格です！";
+            imageUrl = "img/s.png"; // 社交的な性格
+        } else if (score >= 2) {
+            resultText = "あなたはカフカに近い性格です。";
+            imageUrl = "img/b.png"; // バランスの取れた性格
+        } else {
+            resultText = "あなたはホタルに近い性格です。";
+            imageUrl = "img/i.png"; // 大人しい性格
+        }
+
+        document.getElementById('resultText').innerText = resultText;
+        const resultImage = document.getElementById('resultImage');
+        resultImage.src = imageUrl;
+        resultImage.alt = resultText;
+        resultImage.style.display = "block";
+    </script>
+    
+    <p><a href="../index.html" onclick="clearScore()">もう一度やる</a></p>
+</body>
+<script> // ESCキーでサイトに戻る
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            window.location.href = "../../サイト/desaku.html";
+        }
+    });</script>
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>質問 3</title>
+    <script src="main.js"></script>
+</head>
+<body>
+    <h1>質問 3</h1>
+    <form id="questionForm">
+        <label>自分の気持ちを表現することが得意ですか？</label><br>
+        <input type="radio" name="q3" value="0" required>はい<br>
+        <input type="radio" name="q3" value="1">いいえ<br>
+        <button type="submit">次へ</button>
+    </form>
+
+    <script>
+        document.getElementById('questionForm').onsubmit = function(event) {
+            event.preventDefault();
+            const value = parseInt(document.querySelector('input[name="q3"]:checked').value);
+            updateScore('q3', value);
+            window.location.href = 'question4.html';
+        };
+    </script>
+</body>
+</html>

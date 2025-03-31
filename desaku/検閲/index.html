@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>校閲アプリ</title>
+<style>
+/* そのままスタイルは適用 */
+body {
+font-family: Arial, sans-serif;
+background-color: #f9f9f9;
+margin: 0;
+padding: 20px;
+}
+
+.container {
+max-width: 600px;
+margin: auto;
+padding: 20px;
+background: white;
+box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+border-radius: 8px;
+}
+
+h1, h2 {
+text-align: center;
+color: #333;
+}
+
+input[type="file"], input[type="text"], input[type="number"], textarea {
+display: block;
+margin-bottom: 20px;
+font-size: 16px;
+width: 100%;
+}
+
+textarea {
+height: 150px;
+padding: 10px;
+border: 1px solid #ddd;
+border-radius: 4px;
+resize: none;
+background-color: #f0f0f0;
+}
+
+button {
+padding: 10px 20px;
+background-color: #007BFF;
+color: white;
+border: none;
+border-radius: 4px;
+cursor: pointer;
+}
+
+button:hover {
+background-color: #0056b3;
+}
+
+.rule-list {
+margin: 20px 0;
+}
+
+.rule-item {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 10px;
+}
+
+#output {
+margin-top: 20px;
+font-size: 16px;
+line-height: 1.6;
+color: #555;
+}
+</style>
+
+<a href="../サイト/desaku.html" class="unit-conversion-button">サイトに戻る</a>
+<style>
+.unit-conversion-button {
+display: inline-block;
+background-color: #ff69b4;
+color: white;
+padding: 10px 20px;
+border-radius: 5px;
+text-decoration: none;
+font-size: 18px;
+transition: background-color 0.3s;
+margin-top: 20px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+<h1>校閲アプリ</h1>
+<input type="file" id="fileInput" accept=".txt">
+<textarea id="textInput" placeholder="ここに手入力するか、テキストファイルを選択してください"></textarea>
+<div>
+<label for="limit">句読点の上限:</label>
+<input type="number" id="limit" value="10" min="1">
+</div>
+<button id="checkButton">校閲する</button>
+<div>
+<h2>検閲ルール設定</h2>
+<div>
+<label for="ruleKey">検閲する文字列:</label>
+<input type="text" id="ruleKey" placeholder="例: 間違い">
+<label for="ruleValue">変換後の文字列:</label>
+<input type="text" id="ruleValue" placeholder="例: 正しい">
+<button id="addRuleButton">ルールを追加</button>
+</div>
+<div class="rule-list" id="ruleList"></div>
+</div>
+<div id="output"></div>
+</div>
+
+<script>
+let db;
+const request = indexedDB.open("ProofingAppDB", 1);
+
+request.onupgradeneeded = function (event) {
+    db = event.target.result;
+    db.createObjectStore("rules", { keyPath: "key" });
+};
+
+request.onsuccess = function (event) {
+    db = event.target.result;
+    displayRules();
+};
+
+request.onerror = function (event) {
+    console.error("IndexedDBエラー", event);
+};
+
+// IndexedDBから全ルールを取得
+function getAllRules() {
+    return new Promise((resolve) => {
+        const tx = db.transaction("rules", "readonly");
+        const store = tx.objectStore("rules");
+        const request = store.getAll();
+        request.onsuccess = () => {
+            const rules = {};
+            request.result.forEach(item => {
+                rules[item.key] = item.value;
+            });
+            resolve(rules);
+        };
+    });
+}
+
+// ルール追加
+document.getElementById("addRuleButton").addEventListener("click", () => {
+    const ruleKey = document.getElementById("ruleKey").value.trim();
+    const ruleValue = document.getElementById("ruleValue").value.trim();
+
+    if (!ruleKey || !ruleValue) {
+        alert("検閲する文字列と変換後の文字列を両方入力してください。");
+        return;
+    }
+
+    const tx = db.transaction("rules", "readwrite");
+    const store = tx.objectStore("rules");
+    store.put({ key: ruleKey, value: ruleValue });
+
+    tx.oncomplete = () => {
+        document.getElementById("ruleKey").value = "";
+        document.getElementById("ruleValue").value = "";
+        displayRules();
+    };
+});
+
+// ルールリスト表示
+function displayRules() {
+    const ruleList = document.getElementById("ruleList");
+    ruleList.innerHTML = "";
+    getAllRules().then(rules => {
+        Object.entries(rules).forEach(([key, value]) => {
+            const ruleItem = document.createElement("div");
+            ruleItem.className = "rule-item";
+            ruleItem.innerHTML = `
+                <span>${key} → ${value}</span>
+                <button class="deleteRuleButton" data-key="${key}">削除</button>
+            `;
+            ruleList.appendChild(ruleItem);
+        });
+
+        document.querySelectorAll(".deleteRuleButton").forEach(button => {
+            button.addEventListener("click", (e) => {
+                const ruleKey = e.target.getAttribute("data-key");
+                deleteRule(ruleKey);
+            });
+        });
+    });
+}
+
+// ルール削除
+function deleteRule(key) {
+    const tx = db.transaction("rules", "readwrite");
+    const store = tx.objectStore("rules");
+    store.delete(key);
+    tx.oncomplete = () => displayRules();
+}
+
+// ファイル読み込み
+document.getElementById("fileInput").addEventListener("change", (event) => {
+    const file = event.target.files[0];
+    const textInput = document.getElementById("textInput");
+    const reader = new FileReader();
+    if (file) {
+        reader.onload = function (e) {
+            textInput.value = e.target.result;
+        };
+        reader.readAsText(file, "utf-8");
+    } else {
+        textInput.value = "";
+    }
+});
+
+// 校閲ボタン
+document.getElementById("checkButton").addEventListener("click", async () => {
+    const textInput = document.getElementById("textInput").value;
+    const limit = parseInt(document.getElementById("limit").value, 10);
+    const output = document.getElementById("output");
+
+    const customRules = await getAllRules();
+
+    output.innerHTML = "";
+
+    const punctuationCount = (textInput.match(/、|。/g) || []).length;
+    let updatedText = textInput;
+    const matches = [];
+    for (const [key, value] of Object.entries(customRules)) {
+        if (updatedText.includes(key)) {
+            matches.push(`${key} → ${value}`);
+            updatedText = updatedText.replaceAll(key, value);
+        }
+    }
+
+    let results = `<p>句読点の数: ${punctuationCount}</p>`;
+    if (punctuationCount > limit) {
+        results += `<p style="color: red;">句読点の数が上限 (${limit}) を超えています。</p>`;
+    }
+
+    if (matches.length > 0) {
+        results += "<p>以下の検閲対象文字列が変換されました:</p><ul>";
+        matches.forEach(match => {
+            results += `<li>${match}</li>`;
+        });
+        results += "</ul>";
+    } else {
+        results += "<p>検閲対象の文字列は見つかりませんでした。</p>";
+    }
+
+    results += `<h3>変換後のテキスト:</h3><textarea readonly>${updatedText}</textarea>`;
+    output.innerHTML = results;
+});
+
+// ESCキーで戻る
+window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        window.location.href = "../サイト/desaku.html";
+    }
+});
+</script>
+
+</body>
+</html>
