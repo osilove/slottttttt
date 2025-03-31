@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>今日のガチャ運診断</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>今日のガチャ運診断</h1>
+            <p id="current-date"></p>
+        </header>
+        <section>
+            <h2>名前を入力してガチャ運を診断</h2>
+            <form id="name-form">
+                <label for="name-input">名前:</label>
+                <input type="text" id="name-input" placeholder="名前を入力してください" required>
+                <button type="submit">診断する</button>
+            </form>
+            <div class="chart-container">
+                <canvas id="gacha-chart"></canvas>
+            </div>
+
+            <a href="../ガチャシミュ/ガチャシミュ.html" class="link-button">ガチャシミュレーターに行く</a>
+        </section>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <a href="../サイト/desaku.html" class="link-button">サイトに戻る</a>
+    <script src="script.js"></script> <!-- 外部JSファイルを読み込む -->
+</body>
+</html>
