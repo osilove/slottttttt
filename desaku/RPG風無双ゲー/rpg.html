@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #87CEFA;
+            position: relative;
+        }
+
+        #game {
+            position: absolute;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #battle {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(255, 255, 255, 0.8);
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        #battle-message {
+            font-size: 24px;
+            display: block; /* 初期表示 */
+        }
+
+        #attack-button, #flee-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            display: inline-block;
+        }
+
+        .link-button {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .link-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* 動画のスタイル */
+        #attack-video {
+            display: none;
+            width: 80%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="game"></div>
+    <div id="battle">
+        <div id="battle-message">めっちゃ強そうな敵が現れた！</div>
+        <button id="attack-button">Firefly-IVで攻撃する</button>
+        <button id="flee-button">スキップ</button>
+        <video id="attack-video" controls>
+            <source src="attack.mp4" type="video/mp4">
+            あなたのブラウザは動画タグに対応していません。
+        </video>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // 3Dシーンのセットアップ
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('game').appendChild(renderer.domElement);
+
+        // 環境光
+        const ambientLight = new THREE.AmbientLight(0x404040, 1);
+        scene.add(ambientLight);
+
+        // プレイヤー車（SAM）の作成 (正方形)
+        const carGeometry = new THREE.BoxGeometry(2, 2, 2);  // SAMを正方形に変更
+        const carMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // SAMを緑色に
+        const playerCar = new THREE.Mesh(carGeometry, carMaterial);
+        playerCar.position.y = 1;  // SAMの高さを調整
+        scene.add(playerCar);
+
+        // 蛍の形を作成（複数の小さな球体で表現）
+        const fireflyGeometry = new THREE.SphereGeometry(0.1, 16, 16); // 蛍の形を小さな球で作成
+        const fireflyMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFF00 }); // 蛍の色（黄色）
+
+        const fireflies = [];
+        for (let i = 0; i < 5; i++) {
+            const firefly = new THREE.Mesh(fireflyGeometry, fireflyMaterial);
+            firefly.position.set(Math.random() * 2 - 1, 1.5 + Math.random() * 0.5, Math.random() * 2 - 1);
+            fireflies.push(firefly);
+            playerCar.add(firefly); // 蛍をSAMの上に追加
+        }
+
+        // 道路の作成（空色）
+        const roadGeometry = new THREE.PlaneGeometry(100, 1000);
+        const roadMaterial = new THREE.MeshBasicMaterial({ color: 0x87CEFA, side: THREE.DoubleSide }); // 空色に変更
+        const road = new THREE.Mesh(roadGeometry, roadMaterial);
+        road.rotation.x = - Math.PI / 2;
+        road.position.y = 0;
+        scene.add(road);
+
+        // 空に雲を追加
+        const cloudTexture = new THREE.TextureLoader().load('px.png'); // 任意の雲のテクスチャ
+        const cloudGeometry = new THREE.PlaneGeometry(200, 200);
+        const cloudMaterial = new THREE.MeshBasicMaterial({
+            map: cloudTexture,
+            transparent: true,
+            opacity: 0.6
+        });
+
+        const cloud = new THREE.Mesh(cloudGeometry, cloudMaterial);
+        cloud.rotation.x = - Math.PI / 2;
+        cloud.position.set(0, 10, -50); // 少し上の位置に雲を配置
+        scene.add(cloud);
+
+        // カメラの位置
+        camera.position.z = 10;
+        camera.position.y = 3;
+        camera.lookAt(playerCar.position);
+
+        // 車の動き
+        let carSpeed = 0;
+        let carDirection = 0;
+
+        // キー入力で車を動かす
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowLeft') {
+                carDirection = -1;
+            } else if (event.key === 'ArrowRight') {
+                carDirection = 1;
+            } else if (event.key === 'ArrowUp') {
+                carSpeed = 0.1;
+            } else if (event.key === 'ArrowDown') {
+                carSpeed = -0.1;
+            }
+        });
+
+        document.addEventListener('keyup', () => {
+            carSpeed = 0;
+            carDirection = 0;
+        });
+
+        // アニメーションループ
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // 蛍をランダムに動かす
+            fireflies.forEach(firefly => {
+                firefly.position.x += (Math.random() - 0.5) * 0.02; // 小さなランダムな動き
+                firefly.position.z += (Math.random() - 0.5) * 0.02;
+            });
+
+            // プレイヤー車の移動
+            playerCar.position.z += carSpeed;
+
+            // シーンのレンダリング
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // バトル関連
+        const battleMessage = document.getElementById('battle-message');
+        const attackButton = document.getElementById('attack-button');
+        const fleeButton = document.getElementById('flee-button');
+        const attackVideo = document.getElementById('attack-video');
+
+        let enemyAlive = false;
+
+        const enemies = [
+            { name: "ゴブリン", message: "秩序の化身が現れた！" },
+            { name: "オオカミ", message: "凶暴な呼雷が現れた！" },
+            { name: "ドラゴン", message: "終末獣が襲ってきた！" },
+            { name: "アベンチュリン", message: "賭博の砂金石が立ちはだかる！" },
+            { name: "魔女", message: "恐ろしい幻朧が現れた！" }
+        ];
+
+        const encounterChance = 0.05;
+
+        function startBattle() {
+            const enemy = enemies[Math.floor(Math.random() * enemies.length)];
+            battleMessage.textContent = enemy.message;
+            battleMessage.style.display = 'block';
+            attackButton.style.display = 'inline-block';
+            fleeButton.style.display = 'inline-block';
+            enemyAlive = true;
+            document.getElementById('game').style.display = 'none';
+            document.getElementById('battle').style.display = 'flex';
+            attackVideo.style.display = 'none';  // 戦闘開始時に動画を非表示にする
+        }
+
+        function attackEnemy() {
+            if (enemyAlive) {
+                // 攻撃時に文字を非表示
+                battleMessage.style.display = 'none';
+                attackButton.style.display = 'none';
+                fleeButton.style.display = 'none';
+                attackVideo.style.display = 'block'; // 動画を表示
+
+                // 動画の再生位置をリセット
+                attackVideo.currentTime = 0;  // 再生位置を最初に戻す
+                attackVideo.play(); // 動画を再生
+
+                attackVideo.onended = function() {
+                    attackVideo.style.display = 'none';  // 動画終了後に非表示
+                    battleMessage.innerHTML = "<span class='green-text'>死星オーバーロード！敵を倒した！</span>";
+                    battleMessage.style.display = 'block';
+                    setTimeout(returnToGame, 2000);
+                };
+            }
+        }
+
+        function fleeBattle() {
+            battleMessage.textContent = '燃やし尽くした！';
+            attackButton.style.display = 'none';
+            fleeButton.style.display = 'none';
+            setTimeout(returnToGame, 2000);
+        }
+
+        function returnToGame() {
+            document.getElementById('battle').style.display = 'none';
+            document.getElementById('game').style.display = 'block';
+            enemyAlive = false;
+        }
+
+        // プレイヤーがランダムで敵に遭遇
+        function movePlayer(dx, dy) {
+            playerCar.position.x += dx;
+            playerCar.position.z += dy;
+
+            if (!enemyAlive && Math.random() < encounterChance) {
+                startBattle();
+            }
+        }
+
+        // キー入力で車を移動
+        document.addEventListener('keydown', (event) => {
+            switch (event.key) {
+                case 'ArrowUp':
+                    movePlayer(0, -0.1);
+                    break;
+                case 'ArrowDown':
+                    movePlayer(0, 0.1);
+                    break;
+                case 'ArrowLeft':
+                    movePlayer(-0.1, 0);
+                    break;
+                case 'ArrowRight':
+                    movePlayer(0.1, 0);
+                    break;
+            }
+        });
+
+        attackButton.addEventListener('click', attackEnemy);
+        fleeButton.addEventListener('click', fleeBattle);
+         // ESCキーでサイトに戻る
+         window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = "../サイト/desaku.html";
+            }
+        });
+    </script>
+    <a href="../RPG風無双ゲー/index.html" class="link-button">2Dに戻る</a>
+</body>
+</html>
