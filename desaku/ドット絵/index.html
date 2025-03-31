@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>desakuドット絵</title>
+    <style>
+        #canvas {
+            display: grid;
+            border: 2px solid #000;
+            margin-bottom: 10px;
+        }
+        .pixel {
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        .color-picker {
+            margin-bottom: 10px;
+        }
+        .palette {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .palette-color {
+            width: 30px;
+            height: 30px;
+            margin-right: 5px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <label for="canvasSize">キャンバスサイズ: </label>
+    <input type="number" id="canvasSize" value="100" min="1" max="200">
+    <label for="pixelSize">ピクセルサイズ: </label>
+    <input type="number" id="pixelSize" value="20" min="5" max="100">
+    <input type="color" class="color-picker" id="colorPicker" value="#000000">
+    <div class="palette" id="palette"></div>
+    <button id="undoButton">元に戻す</button>
+    <button id="clearButton">一括削除</button>
+    <button id="saveButton">保存</button>
+    <button id="loadImageButton">画像を読み込む</button>
+    <input type="file" id="imageLoader" accept="image/*" style="display: none;">
+    
+    <!-- 座標範囲と色変更用の入力フォーム -->
+    <label for="x1">x1: </label>
+    <input type="number" id="x1" value="0" min="0">
+    <label for="y1">y1: </label>
+    <input type="number" id="y1" value="0" min="0">
+    <label for="x2">x2: </label>
+    <input type="number" id="x2" value="10" min="0">
+    <label for="y2">y2: </label>
+    <input type="number" id="y2" value="10" min="0">
+    
+    <label for="replaceColor">変更前の色: </label>
+    <input type="color" id="replaceColor" value="#FFFFFF">
+    
+    <label for="newColor">変更後の色: </label>
+    <input type="color" id="newColor" value="#FF0000">
+    
+    <button id="replaceColorButton">色を置き換える</button>
+
+    <div id="canvas"></div>
+    <a href="../サイト/desaku.html" class="link-button">サイトに戻る</a>
+    
+    <script src="script.js"></script>
+</body>
+</html>
