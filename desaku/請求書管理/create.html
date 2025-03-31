@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>請求書作成サービス</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/plugins/autoTable/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-fonts-japanese"></script>  <!-- 日本語フォント -->
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f9f9f9;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1, h2 {
+      text-align: center;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+
+    tfoot td {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>請求書作成サービス</h1>
+    <form id="invoice-form">
+      <div class="form-group">
+        <label for="product">商品番号(半角):</label>
+        <input type="text" id="product" name="product" required>
+      </div>
+      <div class="form-group">
+        <label for="unit-price">単価 (円):</label>
+        <input type="number" id="unit-price" name="unit-price" required>
+      </div>
+      <div class="form-group">
+        <label for="quantity">数量:</label>
+        <input type="number" id="quantity" name="quantity" required>
+      </div>
+      <button type="button" id="add-item">商品を追加</button>
+    </form>
+    <h2>請求書</h2>
+    <table id="invoice-table">
+      <thead>
+        <tr>
+          <th>商品番号(半角)</th>
+          <th>単価 (円)</th>
+          <th>数量</th>
+          <th>金額 (円)</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3">合計金額</td>
+          <td id="total-amount">0</td>
+        </tr>
+      </tfoot>
+    </table>
+    <button id="download-pdf">PDFを保存</button>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const { jsPDF } = window.jspdf;
+
+      // 日本語フォントの設定
+      const notoSansJP = 'ここにBase64エンコードしたフォントデータを挿入'; // Base64エンコードしたフォントデータ
+
+      const doc = new jsPDF();
+      doc.addFileToVFS('NotoSansJP.ttf', notoSansJP);  // フォントファイルをVFSに追加
+      doc.addFont('NotoSansJP.ttf', 'NotoSansJP', 'normal');  // フォントを設定
+
+      document.getElementById("add-item").addEventListener("click", function () {
+        const product = document.getElementById("product").value;
+        const unitPrice = parseFloat(document.getElementById("unit-price").value);
+        const quantity = parseInt(document.getElementById("quantity").value);
+
+        if (product && !isNaN(unitPrice) && !isNaN(quantity)) {
+          const tableBody = document.querySelector("#invoice-table tbody");
+          const row = document.createElement("tr");
+
+          const productCell = document.createElement("td");
+          productCell.textContent = product;
+
+          const unitPriceCell = document.createElement("td");
+          unitPriceCell.textContent = unitPrice.toFixed(2);
+
+          const quantityCell = document.createElement("td");
+          quantityCell.textContent = quantity;
+
+          const valueCell = document.createElement("td");
+          valueCell.textContent = (unitPrice * quantity).toFixed(2);
+
+          row.appendChild(productCell);
+          row.appendChild(unitPriceCell);
+          row.appendChild(quantityCell);
+          row.appendChild(valueCell);
+          tableBody.appendChild(row);
+
+          updateTotalAmount();
+          document.getElementById("invoice-form").reset();
+        } else {
+          alert("全ての項目を正しく入力してください。");
+        }
+      });
+
+      function updateTotalAmount() {
+        const totalCells = document.querySelectorAll("#invoice-table tbody tr td:last-child");
+        let totalAmount = 0;
+
+        totalCells.forEach(cell => {
+          totalAmount += parseFloat(cell.textContent);
+        });
+
+        document.getElementById("total-amount").textContent = totalAmount.toFixed(2);
+      }
+
+      // 半角に変換する関数
+      function toHalfWidth(str) {
+        return str.replace(/[！-～]/g, function (s) {
+          return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+        }).replace(/\u3000/g, ' ');
+      }
+
+      document.getElementById("download-pdf").addEventListener("click", function () {
+        const doc = new jsPDF();
+
+        // 日本語フォントを設定
+        doc.setFont('NotoSansJP');
+        
+        // 請求書タイトル
+        doc.setFontSize(18);
+        doc.text("Invoice", 105, 20, { align: "center" });
+
+        // テーブルヘッダー
+        let startY = 30;
+        doc.setFontSize(12);
+        doc.text("Product", 20, startY);
+        doc.text("Unit Price (yen)", 80, startY);
+        doc.text("Quantity", 130, startY);
+        doc.text("Value (yen)", 180, startY);
+
+        // テーブル内容
+        const rows = document.querySelectorAll("#invoice-table tbody tr");
+        rows.forEach((row, index) => {
+          const cells = row.querySelectorAll("td");
+          startY += 10;
+          doc.text(toHalfWidth(cells[0].textContent), 20, startY);
+          doc.text(toHalfWidth(cells[1].textContent), 80, startY, { align: "right" });
+          doc.text(toHalfWidth(cells[2].textContent), 130, startY, { align: "right" });
+          doc.text(toHalfWidth(cells[3].textContent), 180, startY, { align: "right" });
+        });
+
+        // 合計金額
+        startY += 10;
+        doc.setFontSize(14);
+        doc.text(`Total Amount: ${toHalfWidth(document.getElementById("total-amount").textContent)} yen`, 180, startY, { align: "right" });
+
+        // PDFを保存
+        doc.save("請求書.pdf");
+      });
+    });
+
+     // ESCキーでサイトに戻る
+     window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = "../サイト/desaku.html";
+            }
+        });
+  </script>
+<a href="../請求書管理/page.html">戻る</a></body>
+
+</html>
