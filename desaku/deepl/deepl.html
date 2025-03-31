@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepL Translator Redirect</title>
+    <script>
+        function redirectToDeepL(language) {
+            var inputText = document.getElementById("inputText").value;  // ユーザーの入力を取得
+            var deeplUrl = "https://www.deepl.com/ja/translator#" + language + "/ja/" + encodeURIComponent(inputText);  // DeepLのURLを生成
+            window.location.href = deeplUrl;  // リダイレクト
+        }
+         // ESCキーでサイトに戻る
+         window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = "../サイト/desaku.html";
+            }
+        });
+    </script>
+</head>
+<body>
+    <h1>単語を入力してDeepLにリダイレクト</h1>
+    <input type="text" id="inputText" placeholder="単語を入力">
+    <button onclick="redirectToDeepL('en')">英語</button>
+    <button onclick="redirectToDeepL('fr')">フランス語</button>
+    <button onclick="redirectToDeepL('it')">イタリア語</button>
+    <button onclick="redirectToDeepL('de')">ドイツ語</button>
+    
+    <a href="../サイト/desaku.html" class="unit-conversion-button">サイトに戻る</a>
+</body>
+<style>
+    .unit-conversion-button {
+        display: inline-block;
+        background-color: #ff6969; /* ピンク */
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-size: 18px;
+        transition: background-color 0.3s;
+        margin-top: 20px;
+    }
+</style>
+</html>

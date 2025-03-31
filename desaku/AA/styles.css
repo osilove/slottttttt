@@ -1,0 +1,35 @@
+body {
+    font-family: monospace;
+    background-color: #f5f5f5;
+    margin: 0;
+    padding: 0;
+}
+
+.header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: #ffffff;
+    padding: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.container {
+    margin-top: 70px; /* ヘッダーの高さ分のスペースを確保 */
+    text-align: center;
+    padding: 20px;
+}
+
+#asciiContainer {
+    font-size: 6px; /* アスキーアートのサイズ調整 */
+    white-space: pre-wrap; /* アスキーアートの空白を保持 */
+    font-family: monospace;
+    color: black;
+    padding: 10px;
+    overflow-x: auto;
+}

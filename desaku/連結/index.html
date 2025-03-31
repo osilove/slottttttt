@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>画像連結ツール</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>画像連結ツール</h1>
+    <p>2枚以上の画像をアップロードして、透過PNGを生成します。</p>
+    <input type="file" id="imageUploader" multiple accept="image/*">
+    <button id="generateButton">PNGを生成</button>
+    <canvas id="imageCanvas"></canvas>
+    <a id="downloadLink" download="連結後.png">透過PNGをダウンロード</a>
+  </div>
+  <script src="script.js"></script>
+</body><a href="../サイト/desaku.html" class="unit-conversion-button">サイトに戻る</a>
+<style>
+    .unit-conversion-button {
+        display: inline-block;
+        background-color: #ff69b4; /* ピンク */
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-size: 18px;
+        transition: background-color 0.3s;
+        margin-top: 20px;
+    }
+</style>
+</html>

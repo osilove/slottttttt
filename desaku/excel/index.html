@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excelをhtmlで使おうぜ周遊</title>
+    <link rel="stylesheet" href="css,js/styles.css">
+</head>
+<body>
+    <h1>Excel貼ってみようぜ周遊</h1>
+    <input type="file" id="upload" accept=".xlsx, .xls">
+    <button id="download">Download Edited Data</button>
+    <button id="clearAll">一括削除</button> <!-- 一括削除ボタンを追加 -->
+    <div id="table-container"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        document.getElementById('upload').addEventListener('change', handleFileUpload);
+        document.getElementById('download').addEventListener('click', downloadEditedData);
+        document.getElementById('clearAll').addEventListener('click', clearAllData); // 一括削除ボタンのイベントリスナー
+
+        let workbook; // Excelデータを保存する変数
+        let data; // Excelシートのデータ
+
+        // ページ読み込み時にlocalStorageに保存されたデータをチェックして読み込む
+        window.onload = function () {
+            const savedData = localStorage.getItem('excelData');
+            if (savedData) {
+                const parsedData = JSON.parse(savedData);
+                const arrayBuffer = new Uint8Array(parsedData.workbook);
+                workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                data = parsedData.data;
+                displayData();
+            }
+        };
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                const arrayBuffer = e.target.result;
+                const dataArray = new Uint8Array(arrayBuffer);
+                workbook = XLSX.read(dataArray, { type: 'array' });
+                data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+                displayData();
+                saveDataToLocalStorage();
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        function displayData() {
+            const container = document.getElementById('table-container');
+            container.innerHTML = ''; // 前のデータをクリア
+
+            const table = document.createElement('table');
+            data.forEach((row, rowIndex) => {
+                const tr = document.createElement('tr');
+                row.forEach((cell, colIndex) => {
+                    const td = document.createElement('td');
+                    td.contentEditable = true; // 編集可能にする
+                    td.textContent = cell || ''; // 空セルの場合に対応
+                    td.dataset.row = rowIndex;
+                    td.dataset.col = colIndex;
+
+                    // セルが変更されたときのイベントリスナー
+                    td.addEventListener('input', function () {
+                        data[rowIndex][colIndex] = td.textContent; // データを更新
+                        saveDataToLocalStorage(); // 編集内容をlocalStorageに保存
+                    });
+
+                    // セルをダブルクリックで削除する機能
+                    td.addEventListener('dblclick', function () {
+                        td.textContent = ''; // セルの内容を削除
+                        data[rowIndex][colIndex] = ''; // データも更新
+                        saveDataToLocalStorage(); // localStorageを更新
+                    });
+
+                    tr.appendChild(td);
+                });
+                table.appendChild(tr);
+            });
+
+            container.appendChild(table);
+        }
+
+        function downloadEditedData() {
+            const newSheet = XLSX.utils.aoa_to_sheet(data);
+            const newWorkbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(newWorkbook, newSheet, 'EditedSheet');
+            XLSX.writeFile(newWorkbook, 'edited_data.xlsx');
+        }
+
+        // 一括削除機能
+        function clearAllData() {
+            // data配列の全てのセルの内容を空にする
+            data = []; // 空の配列にしてデータをリセット
+
+            // テーブルを完全にリセットし、空のテーブルを表示
+            const container = document.getElementById('table-container');
+            container.innerHTML = ''; // 既存のテーブルを完全に削除
+            displayData(); // 空のテーブルを表示
+
+            // localStorageを更新して削除した状態を保存
+            saveDataToLocalStorage();
+        }
+
+        // 編集データをlocalStorageに保存
+        function saveDataToLocalStorage() {
+            // workbookのデータをバイナリ形式で保存
+            const workbookData = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+            localStorage.setItem('excelData', JSON.stringify({
+                workbook: Array.from(workbookData),
+                data: data
+            }));
+        }
+         // ESCキーでサイトに戻る
+         window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = "../サイト/desaku.html";
+            }
+        });
+    </script>
+
+    <!-- 水色のボタンに変更 -->
+    <a href="../word/index.html" class="unit-cs-button">WordのHTML化はこちら</a>
+
+    <a href="../サイト/desaku.html" class="unit-conversion-button">サイトに戻る</a>
+
+</body>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        text-align: center;
+    }
+
+    h1 {
+        color: #333;
+    }
+
+    input[type="file"] {
+        margin-bottom: 20px;
+    }
+
+    #table-container {
+        margin-top: 20px;
+        overflow-x: auto;
+    }
+
+    table {
+        border-collapse: collapse;
+        margin: 0 auto;
+        width: 80%;
+    }
+
+    th, td {
+        border: 1px solid #ccc;
+        padding: 10px;
+        text-align: left;
+    }
+
+    th {
+        background-color: #f4f4f4;
+    }
+
+    td:focus {
+        outline: 2px solid #00f;
+    }
+
+    .unit-conversion-button {
+        display: inline-block;
+        background-color: #ff69b4; /* ピンク */
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-size: 18px;
+        transition: background-color 0.3s;
+        margin-top: 20px;
+    }
+
+    /* 水色のボタンのスタイル */
+    .unit-cs-button {
+        display: inline-block;
+        background-color: #00bfff; /* 水色 */
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-size: 18px;
+        transition: background-color 0.3s;
+        margin-top: 20px;
+    }
+
+    button {
+        margin: 10px;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+</style>
+</html>

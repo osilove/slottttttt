@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>最大と最小の素数を探す</title>
+<style>
+body {
+font-family: Arial, sans-serif;
+margin: 0;
+padding: 0;
+display: flex;
+justify-content: center;
+align-items: center;
+height: 100vh;
+background-color: #f4f4f9;
+}
+
+.container {
+text-align: center;
+background: #ffffff;
+padding: 20px;
+border-radius: 10px;
+box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+label {
+display: block;
+margin: 10px 0 5px;
+}
+
+input {
+width: 200px;
+padding: 8px;
+margin-bottom: 15px;
+border: 1px solid #ccc;
+border-radius: 5px;
+}
+
+button {
+padding: 10px 15px;
+background-color: #007bff;
+color: white;
+border: none;
+border-radius: 5px;
+cursor: pointer;
+}
+
+button:hover {
+background-color: #0056b3;
+}
+
+#result {
+margin-top: 20px;
+font-size: 1.2em;
+color: #333;
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>範囲内の最大と最小の素数を探す</h1>
+<label for="minValue">最小値:</label>
+<input type="number" id="minValue" placeholder="例: 10">
+<label for="maxValue">最大値:</label>
+<input type="number" id="maxValue" placeholder="例: 50">
+<button id="findPrimeBtn">最大と最小の素数を表示</button>
+<p id="result"></p>
+</div>
+
+<script>
+// 素数判定関数
+function isPrime(num) {
+if (num <= 1) return false;
+for (let i = 2; i <= Math.sqrt(num); i++) {
+if (num % i === 0) return false;
+}
+return true;
+}
+
+// 最大素数と最小素数を探す関数
+function findPrimeRange(min, max) {
+let maxPrime = null;
+let minPrime = null;
+
+for (let i = max; i >= min; i--) {
+if (isPrime(i)) {
+  maxPrime = i;
+  break; // 最大素数を見つけたらループを終了
+}
+}
+
+for (let i = min; i <= max; i++) {
+if (isPrime(i)) {
+  minPrime = i;
+  break; // 最小素数を見つけたらループを終了
+}
+}
+
+return { maxPrime, minPrime };
+}
+
+// ボタンのクリックイベントリスナー
+document.getElementById("findPrimeBtn").addEventListener("click", () => {
+const min = parseInt(document.getElementById("minValue").value);
+const max = parseInt(document.getElementById("maxValue").value);
+const resultElement = document.getElementById("result");
+
+if (isNaN(min) || isNaN(max) || min > max) {
+resultElement.textContent = "正しい範囲を入力してください。";
+return;
+}
+
+const { maxPrime, minPrime } = findPrimeRange(min, max);
+
+if (maxPrime !== null && minPrime !== null) {
+resultElement.textContent = `最大の素数は ${maxPrime} で、最小の素数は ${minPrime} です。`;
+} else if (maxPrime !== null) {
+resultElement.textContent = `最大の素数は ${maxPrime} ですが、最小の素数は見つかりませんでした。`;
+} else if (minPrime !== null) {
+resultElement.textContent = `最小の素数は ${minPrime} ですが、最大の素数は見つかりませんでした。`;
+} else {
+resultElement.textContent = "指定した範囲内に素数はありません。";
+}
+});
+ // ESCキーでサイトに戻る
+ window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = "../サイト/desaku.html";
+            }
+        });
+</script>
+</body><a href="../サイト/desaku.html" class="unit-conversion-button">サイトに戻る</a>
+<style>
+    .unit-conversion-button {
+        display: inline-block;
+        background-color: #ff69b4; /* ピンク */
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-size: 18px;
+        transition: background-color 0.3s;
+        margin-top: 20px;
+    }
+</style>
+</html>

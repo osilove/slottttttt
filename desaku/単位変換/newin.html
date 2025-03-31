@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数学計算ツール</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      flex-direction: column;
+      height: 100vh;
+      background-color: #f9f9f9;
+      position: relative;
+    }
+
+    .container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      width: 80%;
+      margin: 10px;
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+
+    .buttons {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #result {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #fff;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #007bff;
+      z-index: 1000;
+    }
+
+    .history {
+      margin-top: 20px;
+      text-align: left;
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+    }
+
+    .clear-history {
+      margin-top: 10px;
+      background-color: #dc3545;
+    }
+
+    .clear-history:hover {
+      background-color: #c82333;
+    }
+
+    .link-button {
+      display: inline-block;
+      padding: 10px 20px;
+      margin: 10px;
+      text-decoration: none;
+      font-size: 16px;
+      border-radius: 5px;
+      color: white;
+      text-align: center;
+    }
+
+    .link-button-red {
+      background-color: #dc3545;
+    }
+
+    .link-button-red:hover {
+      background-color: #c82333;
+    }
+
+    .link-button-blue {
+      background-color: #007bff;
+    }
+
+    .link-button-blue:hover {
+      background-color: #0056b3;
+    }
+
+    .link-button-pink {
+      background-color: #fd30ca;
+    }
+
+    .link-button-pink:hover {
+      background-color: #9423c8;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 日本語数値単位変換器 -->
+  <div class="container">
+    <h1>日本語数値単位変換器</h1>
+    <input type="text" id="numberInput" placeholder="数値を入力">
+    <div class="buttons">
+      <button onclick="calculate('sqr')">x²</button>
+      <button onclick="calculate('sqrt')">√</button>
+      <button onclick="convertNumber()">変換</button>
+      <button onclick="showHistory()">履歴</button>
+    </div>
+    <button class="clear-history" onclick="clearHistory()">履歴をクリア</button>
+    <div id="history" class="history"></div>
+  </div>
+
+  <!-- 微分積分関数電卓 -->
+  <div class="container">
+    <h1>微積分</h1>
+    <div>
+      <label for="function">関数 (例: 86*x):</label>
+      <input type="text" id="function" placeholder="関数を入力してください">
+    </div>
+    <div>
+      <label for="variable">変数:</label>
+      <input type="text" id="variable" value="x" placeholder="例: x">
+    </div>
+    <div>
+      <label for="point">評価点 (任意):</label>
+      <input type="text" id="point" placeholder="例: 2">
+    </div>
+    <div>
+      <label for="lowerLimit">積分下限 (定積分のみ):</label>
+      <input type="text" id="lowerLimit" value="0" placeholder="例: 0">
+    </div>
+    <div>
+      <label for="upperLimit">積分上限 (定積分のみ):</label>
+      <input type="text" id="upperLimit" value="1" placeholder="例: 1">
+    </div>
+    <div class="buttons">
+      <button onclick="calculateDerivative()">微分</button>
+      <button onclick="calculateDefiniteIntegral()">定積分</button>
+      <button onclick="calculateIndefiniteIntegral()">不定積分</button>
+    </div>
+    <div id="result"></div>
+  </div>
+
+  <script>
+    const history = [];
+    let lastResult = null;
+
+    function calculate(operation) {
+      let input = document.getElementById('numberInput').value;
+      let number;
+
+      try {
+        if (input.trim() === '') throw new Error("入力が無効です。数値を入力してください。");
+        number = eval(input);
+        if (number < 0) throw new Error("負の数は無効です。");
+
+        if (operation === 'sqrt') {
+          lastResult = Math.sqrt(number);
+        } else if (operation === 'sqr') {
+          lastResult = Math.pow(number, 2);
+        }
+      } catch (error) {
+        document.getElementById('result').textContent = error.message;
+        return;
+      }
+
+      document.getElementById('numberInput').value = lastResult;
+      document.getElementById('result').textContent = lastResult;
+      history.push(`計算: ${input} = ${lastResult}`);
+    }
+
+    function convertNumber() {
+    let input = document.getElementById('numberInput').value.replace(/\s+/g, '');
+    const units = [
+        "", "万", "億", "兆", "京", "垓", "禾", "穣", "溝", "澗", "正", "載", "極", "恒河沙", "阿僧祇", "那由他", "不可思議", "無量大数",
+        "洛叉", "倶胝", "阿ゆ多", "那由他", "頻波羅", "矜羯羅", "阿伽羅", "最勝", "摩婆羅", "阿婆羅", "多婆羅", "界分", "普摩", "禰摩",
+        "阿婆鈐", "弥伽婆", "毘ら伽", "毘伽婆", "僧羯邏摩", "毘薩羅", "毘贍婆", "毘盛伽", "毘素陀", "毘婆訶", "毘薄底", "毘きゃ擔",
+        "称量", "一持", "異路", "顛倒", "三末耶", "毘睹羅", "奚婆羅", "伺察", "周広", "高出", "最妙", "泥羅婆", "訶理婆", "一動",
+        "訶理蒲", "訶理三", "奚魯伽", "達ら歩陀", "訶魯那", "摩魯陀", "懺慕陀", "えらい陀", "摩魯摩", "調伏", "離きょう慢", "不動",
+        "極量", "阿麼怛羅", "勃麼怛羅", "伽麼怛羅", "那麼怛羅", "奚麼怛羅", "べい麼怛羅", "鉢羅麼怛羅", "尸婆麼怛羅", "翳羅",
+        "薜羅", "諦羅", "偈羅", "歩羅", "泥羅", "計羅", "細羅", "睥羅", "謎羅", "娑ら荼", "謎魯陀", "契魯陀", "摩睹羅", "娑母羅",
+        "阿野娑", "迦麼羅", "摩伽婆", "阿怛羅", "醯魯耶", "薜魯婆", "羯羅波", "訶婆婆", "毘婆羅", "那婆羅", "摩ら羅", "娑婆羅",
+        "迷ら普", "者麼羅", "駄麼羅", "鉢ら麼陀", "毘迦摩", "烏波跋多", "演説", "無尽", "出生", "無我", "阿畔多", "青蓮華", "鉢頭摩",
+        "僧祇", "趣", "至", "阿僧祇", "阿僧祇転", "無量", "無量転", "無辺", "無辺転", "無等", "無等転", "不可数", "不可数転", "不可称",
+        "不可称転", "不可思", "不可思転", "不可量", "不可量転", "不可説", "不可説転", "不可説不可説", "不可説不可説転"
+    ];
+
+    if (!/^\d+$/.test(input)) {
+        document.getElementById('result').textContent = "正しい数字を入力してください";
+        return;
+    }
+
+    // 下位桁も全部取得
+    let result = '';
+    let index = 0;
+    while (input.length > 0) {
+        const segment = input.length > 4 ? input.slice(-4) : input;
+        const num = parseInt(segment, 10);
+        if (num !== 0) {
+            if (index < units.length) {
+                result = `${num}${units[index]}` + result;
+            } else {
+                const extra転 = "K転".repeat(index - units.length + 1);
+                result = `${num}不可説不可説${extra転}` + result;
+            }
+        }
+        input = input.length > 4 ? input.slice(0, -4) : "";
+        index++;
+    }
+
+    document.getElementById('result').textContent = result || "無";
+}
+
+    function convertToJapanese(num) {
+      const units = ["", "十", "百", "千"];
+      let result = '';
+      let isLeadingZero = true;
+      for (let i = 0; i < units.length; i++) {
+        let currentDigit = num % 10;
+        if (currentDigit > 0) {
+          if (result !== '' && !isLeadingZero) {
+            result = "零" + result;
+          }
+          result = currentDigit + units[i] + result;
+          isLeadingZero = false;
+        } else if (!isLeadingZero) {
+          result = "零" + result;
+        }
+        num = Math.floor(num / 10);
+      }
+      return result.replace(/^零/, '');
+    }
+
+    function showHistory() {
+      const historyDiv = document.getElementById('history');
+      historyDiv.innerHTML = history.length > 0 ? history.join('<br>') : "履歴はありません。";
+    }
+
+    function clearHistory() {
+      history.length = 0;
+      document.getElementById('history').innerHTML = "履歴はありません。";
+    }
+
+    // 微積分
+    function calculateDerivative() {
+      const func = document.getElementById('function').value;
+      const variable = document.getElementById('variable').value;
+      try {
+        const derivative = math.derivative(func, variable).toString();
+        document.getElementById('result').textContent = `微分結果: ${derivative}`;
+      } catch (error) {
+        document.getElementById('result').textContent = `エラー: ${error.message}`;
+      }
+    }
+
+    function calculateDefiniteIntegral() {
+      const func = document.getElementById('function').value;
+      const variable = document.getElementById('variable').value;
+      const lowerLimit = parseFloat(document.getElementById('lowerLimit').value) || 0;
+      const upperLimit = parseFloat(document.getElementById('upperLimit').value) || 1;
+      try {
+        const result = numericalIntegration(func, variable, lowerLimit, upperLimit);
+        document.getElementById('result').textContent = `定積分結果: ${result}`;
+      } catch (error) {
+        document.getElementById('result').textContent = `エラー: ${error.message}`;
+      }
+    }
+
+    function calculateIndefiniteIntegral() {
+      const func = document.getElementById('function').value;
+      const variable = document.getElementById('variable').value;
+      try {
+        const result = `不定積分結果: ${func} dx + C`;
+        document.getElementById('result').textContent = result;
+      } catch (error) {
+        document.getElementById('result').textContent = `エラー: ${error.message}`;
+      }
+    }
+
+    function numericalIntegration(func, variable, lowerLimit, upperLimit) {
+      const numIntervals = 1000;
+      const stepSize = (upperLimit - lowerLimit) / numIntervals;
+      let sum = 0;
+      for (let i = 0; i < numIntervals; i++) {
+        const x1 = lowerLimit + i * stepSize;
+        const x2 = lowerLimit + (i + 1) * stepSize;
+        const f1 = math.evaluate(func, { [variable]: x1 });
+        const f2 = math.evaluate(func, { [variable]: x2 });
+        sum += (f1 + f2) * stepSize / 2;
+      }
+      return sum;
+    }
+
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        window.location.href = "../サイト/desaku.html";
+      }
+    });
+  </script>
+
+  <!-- リンクボタン -->
+  <a href="../単位変換/BN.html" class="link-button link-button-red">進数変換</a>
+  <a href="../単位変換/log.html" class="link-button link-button-pink">log変換</a>
+  <a href="../サイト/desaku.html" class="link-button link-button-blue">サイトに戻る</a>
+
+</body>
+
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>desakuドット絵</title>
+    <style>
+        #canvas {
+            display: grid;
+            border: 2px solid #000;
+            margin-bottom: 10px;
+            grid-gap: 1px;
+        }
+        .pixel {
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        .color-picker {
+            margin-bottom: 10px;
+        }
+        .palette {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .palette-color {
+            width: 30px;
+            height: 30px;
+            margin-right: 5px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+        }
+        .vba-textbox {
+            width: 100%;
+            height: 250px;
+            font-family: monospace;
+            font-size: 14px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin-top: 20px;
+            resize: none;
+        }
+        .copy-button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .copy-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <label for="canvasSize">キャンバスサイズ: </label>
+    <input type="number" id="canvasSize" value="100" min="1" max="100">
+    <label for="pixelSize">ピクセルサイズ: </label>
+    <input type="number" id="pixelSize" value="20" min="5" max="50">
+    <input type="color" class="color-picker" id="colorPicker" value="#000000">
+    <div class="palette" id="palette"></div>
+    <button id="undoButton">元に戻す</button>
+    <button id="clearButton">一括削除</button>
+    <button id="saveToExcel">エクセルに保存</button>
+    <button id="loadImageButton">画像を読み込む</button>
+    <input type="file" id="imageLoader" accept="image/*" style="display: none;">
+    <div id="canvas"></div>
+    <a href="../サイト/desaku.html" class="link-button">サイトに戻る</a>
+
+    <h3>VBAコード (コピー用):</h3>
+    <textarea class="vba-textbox" id="vbaCode" readonly>
+Sub ColorCellsByHexCode()
+    Dim cell As Range
+    Dim hexColor As String
+    Dim ws As Worksheet
+
+    Set ws = ThisWorkbook.Sheets("Canvas")
+
+    For Each cell In ws.UsedRange
+        If cell.HasFormula = False Then
+            hexColor = cell.Value
+            If Len(hexColor) = 7 And Mid(hexColor, 1, 1) = "#" Then
+                If IsHexColor(Mid(hexColor, 2, 6)) Then
+                    cell.Interior.Color = RGB(CInt("&H" & Mid(hexColor, 2, 2)), _
+                                              CInt("&H" & Mid(hexColor, 4, 2)), _
+                                              CInt("&H" & Mid(hexColor, 6, 2)))
+                End If
+            End If
+        End If
+    Next cell
+End Sub
+
+Function IsHexColor(colorStr As String) As Boolean
+    IsHexColor = colorStr Like "[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]"
+End Function
+    </textarea>
+    <h1>alt＋f11を押して出るVBAで挿入→標準モジュールでこのコードを入れてF5で実行してね</h1>
+    <button class="copy-button" onclick="copyVBA()">VBAコードをコピー</button>
+
+    <script>
+        function copyVBA() {
+            const vbaCodeTextArea = document.getElementById('vbaCode');
+            vbaCodeTextArea.select();
+            document.execCommand('copy');
+            alert('VBAコードがコピーされました!');
+        }
+
+        const canvas = document.getElementById('canvas');
+        const colorPicker = document.getElementById('colorPicker');
+        const pixelSizeInput = document.getElementById('pixelSize');
+        const canvasSizeInput = document.getElementById('canvasSize');
+        const clearButton = document.getElementById('clearButton');
+        const saveToExcelButton = document.getElementById('saveToExcel');
+        const imageLoader = document.getElementById('imageLoader');
+        const loadImageButton = document.getElementById('loadImageButton');
+
+        let currentColor = colorPicker.value;
+        let history = [];
+        let historyIndex = -1;
+
+        // IndexedDB setup
+        let db;
+        const request = indexedDB.open("DotArtDB", 1);
+        request.onupgradeneeded = function (event) {
+            db = event.target.result;
+            if (!db.objectStoreNames.contains('canvasStore')) {
+                db.createObjectStore('canvasStore', { keyPath: 'id' });
+            }
+        };
+        request.onsuccess = function (event) {
+            db = event.target.result;
+            loadCanvasState();
+        };
+        request.onerror = function (event) {
+            console.error("IndexedDBエラー", event);
+        };
+
+        function createCanvas(size, pixelSize) {
+            canvas.innerHTML = '';
+            canvas.style.gridTemplateColumns = `repeat(${size}, ${pixelSize}px)`;
+            canvas.style.gridTemplateRows = `repeat(${size}, ${pixelSize}px)`;
+            for (let i = 0; i < size * size; i++) {
+                const pixel = document.createElement('div');
+                pixel.classList.add('pixel');
+                pixel.style.width = `${pixelSize}px`;
+                pixel.style.height = `${pixelSize}px`;
+                pixel.addEventListener('mousedown', () => updateCanvasState(pixel));
+                canvas.appendChild(pixel);
+            }
+        }
+
+        createCanvas(100, pixelSizeInput.value);
+
+        canvasSizeInput.addEventListener('change', () => {
+            createCanvas(canvasSizeInput.value, pixelSizeInput.value);
+            loadCanvasState();
+        });
+
+        pixelSizeInput.addEventListener('change', () => {
+            createCanvas(canvasSizeInput.value, pixelSizeInput.value);
+            loadCanvasState();
+        });
+
+        clearButton.addEventListener('click', () => {
+            const pixels = document.querySelectorAll('.pixel');
+            pixels.forEach(pixel => (pixel.style.backgroundColor = ''));
+            saveCanvasState();
+        });
+
+        saveToExcelButton.addEventListener('click', () => {
+            const size = parseInt(canvasSizeInput.value, 10);
+            const pixelSize = parseInt(pixelSizeInput.value, 10);
+            const data = [];
+            const cells = [];
+            const pixels = document.querySelectorAll('.pixel');
+            for (let row = 0; row < size; row++) {
+                const rowData = [];
+                for (let col = 0; col < size; col++) {
+                    const pixelIndex = row * size + col;
+                    const color = window.getComputedStyle(pixels[pixelIndex]).backgroundColor;
+                    const hexColor = rgbToHex(color);
+                    rowData.push(hexColor);
+                    cells.push({ r: row, c: col, color: hexColor });
+                }
+                data.push(rowData);
+            }
+            const worksheet = XLSX.utils.aoa_to_sheet(data);
+            worksheet['!cols'] = [];
+            worksheet['!rows'] = [];
+            for (let col = 0; col < size; col++) {
+                worksheet['!cols'][col] = { wpx: pixelSize };
+            }
+            for (let row = 0; row < size; row++) {
+                worksheet['!rows'][row] = { hpx: pixelSize * 1.2 };
+            }
+            cells.forEach(cell => {
+                const cellRef = XLSX.utils.encode_cell({ r: cell.r, c: cell.c });
+                if (cell.color) {
+                    if (!worksheet[cellRef]) worksheet[cellRef] = {};
+                    worksheet[cellRef].s = {
+                        fill: {
+                            fgColor: { rgb: cell.color.slice(1).toUpperCase() }
+                        }
+                    };
+                }
+            });
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Canvas');
+            XLSX.writeFile(workbook, 'dot_art.xlsx');
+        });
+
+        function rgbToHex(rgb) {
+            const result = /^rgba?\((\d+), (\d+), (\d+)(?:, [\d.]+)?\)$/.exec(rgb);
+            if (result) {
+                const r = parseInt(result[1], 10);
+                const g = parseInt(result[2], 10);
+                const b = parseInt(result[3], 10);
+                return `#${(1 << 24 | (r << 16) | (g << 8) | b).toString(16).slice(1).toUpperCase()}`;
+            }
+            return '';
+        }
+
+        loadImageButton.addEventListener('click', () => {
+            imageLoader.click();
+        });
+
+        imageLoader.addEventListener('change', event => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = event => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvasSize = canvasSizeInput.value;
+                    const context = document.createElement('canvas').getContext('2d');
+                    context.canvas.width = canvasSize;
+                    context.canvas.height = canvasSize;
+                    context.drawImage(img, 0, 0, canvasSize, canvasSize);
+                    const imageData = context.getImageData(0, 0, canvasSize, canvasSize);
+                    const pixels = document.querySelectorAll('.pixel');
+                    for (let i = 0; i < pixels.length; i++) {
+                        const r = imageData.data[i * 4];
+                        const g = imageData.data[i * 4 + 1];
+                        const b = imageData.data[i * 4 + 2];
+                        pixels[i].style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+                    }
+                    saveCanvasState();
+                };
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function updateCanvasState(pixel) {
+            pixel.style.backgroundColor = currentColor;
+            saveCanvasState();
+        }
+
+        function saveCanvasState() {
+            const pixels = document.querySelectorAll('.pixel');
+            const state = Array.from(pixels).map(pixel => {
+                const color = pixel.style.backgroundColor;
+                return color === 'rgb(255, 255, 255)' ? '' : color;
+            });
+            history = history.slice(0, historyIndex + 1);
+            history.push(state);
+            historyIndex++;
+            const transaction = db.transaction(['canvasStore'], 'readwrite');
+            const store = transaction.objectStore('canvasStore');
+            store.put({ id: 'currentCanvas', data: state });
+        }
+
+        function loadCanvasState() {
+            const transaction = db.transaction(['canvasStore'], 'readonly');
+            const store = transaction.objectStore('canvasStore');
+            const request = store.get('currentCanvas');
+            request.onsuccess = function (event) {
+                const result = event.target.result;
+                if (result && result.data) {
+                    const state = result.data;
+                    const pixels = document.querySelectorAll('.pixel');
+                    state.forEach((color, i) => {
+                        pixels[i].style.backgroundColor = color;
+                    });
+                    history.push(state);
+                    historyIndex = 0;
+                }
+            };
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                undo();
+            }
+        });
+
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                const state = history[historyIndex];
+                const pixels = document.querySelectorAll('.pixel');
+                state.forEach((color, i) => {
+                    pixels[i].style.backgroundColor = color;
+                });
+            }
+        }
+
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = "../サイト/desaku.html";
+            }
+        });
+    </script>
+</body>
+</html>

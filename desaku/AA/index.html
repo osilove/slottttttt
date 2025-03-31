@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AA</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="header">
+        <input type="file" id="imageInput" accept="image/*">
+        <label for="charWidthInput">文字幅:</label>
+        <input type="number" id="charWidthInput" value="100" min="50" max="200"> 文字
+        <button id="generateButton">生成</button>
+        <button id="saveButton">保存</button>
+        <button id="clearButton">削除</button>
+    </div>
+    <div class="container">
+        <div id="asciiContainer"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+<a href="../normalAA/d.html" class="unit-cs-button">色なしに変更するならこちら</a>
+<a href="../サイト/desaku.html" class="unit-conversion-button">サイトに戻る</a>
+<style>
+    .unit-conversion-button {
+        display: inline-block;
+        background-color: #ff69b4; /* ピンク */
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-size: 18px;
+        transition: background-color 0.3s;
+        margin-top: 20px;
+    }
+    .unit-cs-button {
+        display: inline-block;
+        background-color: #7369ff; 
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-size: 18px;
+        transition: background-color 0.3s;
+        margin-top: 20px;
+    }
+</style>
+</html>

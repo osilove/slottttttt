@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>月間メモちゃん</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column; /* Ensure the elements are stacked vertically */
+  align-items: center;
+}
+
+.header {
+  background-color: #f0f0f0;
+  padding: 10px;
+  width: 100%;
+  text-align: center;
+}
+
+.top-image-placeholder {
+  height: 100px;
+  background-color: #ddd;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 20px;
+  font-weight: bold;
+  color: #555;
+  border-bottom: 2px solid #ccc;
+  width: 100%;
+}
+
+.calendar-container {
+  display: flex;
+  flex-direction: column; /* Stack calendar days vertically */
+  gap: 1px;
+  background-color: #ddd;
+  margin: 10px;
+  width: 100%;
+}
+
+.calendar-day {
+  background-color: #f9f9f9;
+  padding: 10px;
+  text-align: left;
+  vertical-align: top;
+  font-size: 12px;
+  min-height: 100px;
+}
+
+.memo-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.memo-list li {
+  background-color: #eef;
+  margin: 5px 0;
+  padding: 5px;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.memo-list li.delete-mode {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.add-memo-btn {
+  margin-top: 5px;
+  padding: 5px 10px;
+  font-size: 12px;
+  align-self: center;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.icon-button {
+  margin-left: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: #333;
+}
+
+.icon-button:hover {
+  color: #007bff;
+}
+
+.bottom-image-placeholder {
+  height: 100px;
+  background-color: #ddd;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 20px;
+  font-weight: bold;
+  color: #555;
+  border-top: 2px solid #ccc;
+  width: 100%;
+}
+
+.unit-cn-button, .unit-conversion-button {
+  display: inline-block;
+  background-color: #8069ff;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  text-decoration: none;
+  font-size: 18px;
+  transition: background-color 0.3s;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.unit-cn-button {
+  background-color: #8069ff;
+}
+
+.unit-cn-button:hover {
+  background-color: #4e3c8e;
+}
+
+.unit-conversion-button {
+  background-color: #ff69b4;
+}
+
+.unit-conversion-button:hover {
+  background-color: #e0548f;
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <button id="prevMonth">← 前の月</button>
+  <span id="currentMonth"></span>
+  <button id="nextMonth">次の月 →</button>
+  <button id="deleteModeButton" class="icon-button">🔥</button>
+</div>
+
+<div class="top-image-placeholder" id="topImage">
+  <img id="monthImage" src="月.png" alt="月の画像" style="height: 100%; width: auto;">
+</div>
+
+<div id="calendar" class="calendar-container">
+  <!-- カレンダーがここに表示される -->
+</div>
+
+<div class="bottom-image-placeholder" id="bottomImage">
+  <img src="../画像/dragon.png" alt="ドラゴン画像" style="height: 100%; width: auto;">
+</div>
+
+<a href="../週月メモHTML/memo_month.html" class="unit-cn-button">横メモはこちら</a>
+<a href="../サイト/desaku.html" class="unit-conversion-button">サイトに戻る</a>
+
+<script>
+  let db;
+  const request = indexedDB.open("MonthlyMemoDB", 1);
+  
+  request.onupgradeneeded = function (event) {
+      db = event.target.result;
+      db.createObjectStore("memos", { keyPath: "monthKey" });
+  };
+  
+  request.onsuccess = function (event) {
+      db = event.target.result;
+      renderMonth();
+  };
+  
+  // ユーティリティ関数
+  const getMonthKey = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    return `${year}-${month}`;
+  };
+  
+  // IndexedDBからメモを取得
+  function loadMemos(monthKey) {
+      return new Promise((resolve) => {
+          const tx = db.transaction("memos", "readonly");
+          const store = tx.objectStore("memos");
+          const req = store.get(monthKey);
+          req.onsuccess = () => {
+              resolve(req.result ? req.result.data : {});
+          };
+      });
+  }
+  
+  // IndexedDBにメモを保存
+  function saveMemos(monthKey, memos) {
+      const tx = db.transaction("memos", "readwrite");
+      const store = tx.objectStore("memos");
+      store.put({ monthKey: monthKey, data: memos });
+  }
+  
+  // ================= カレンダー描画 =================
+  const calendar = document.getElementById('calendar');
+  const currentMonthSpan = document.getElementById('currentMonth');
+  const prevMonthButton = document.getElementById('prevMonth');
+  const nextMonthButton = document.getElementById('nextMonth');
+  const deleteModeButton = document.getElementById('deleteModeButton');
+  const monthImage = document.getElementById('monthImage');
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let currentMonthDate = new Date(today);
+  currentMonthDate.setDate(1);
+  
+  let deleteMode = false;
+  
+  const updateMonthImage = () => {
+    const currentMonth = currentMonthDate.getMonth() + 1;
+    monthImage.src = `../画像/${currentMonth}月.png`;
+    monthImage.alt = `${currentMonth}月の画像`;
+  };
+  
+  // メインの描画関数
+  async function renderMonth() {
+    calendar.innerHTML = '';
+    const monthStart = new Date(currentMonthDate);
+    const year = monthStart.getFullYear();
+    const month = monthStart.getMonth() + 1;
+    const monthKey = getMonthKey(monthStart);
+    const memos = await loadMemos(monthKey);
+  
+    currentMonthSpan.textContent = `${year}年${month}月`;
+    updateMonthImage();
+  
+    prevMonthButton.disabled = monthStart.getTime() <= today.getTime();
+  
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const firstDayOfWeek = monthStart.getDay();
+  
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      const emptyCell = document.createElement('div');
+      emptyCell.className = 'calendar-day';
+      calendar.appendChild(emptyCell);
+    }
+  
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dayCell = document.createElement('div');
+      dayCell.className = 'calendar-day';
+  
+      const dateTitle = document.createElement('div');
+      dateTitle.textContent = `${i}(${['日', '月', '火', '水', '木', '金', '土'][new Date(year, month - 1, i).getDay()]})`;
+      dateTitle.style.fontWeight = 'bold';
+  
+      const memoList = document.createElement('ul');
+      memoList.className = 'memo-list';
+  
+      const dailyMemos = memos[i] || [];
+  
+      dailyMemos.forEach((memo, index) => {
+        const memoItem = document.createElement('li');
+        memoItem.textContent = memo;
+        if (deleteMode) {
+          memoItem.classList.add('delete-mode');
+        }
+        memoItem.addEventListener('click', () => {
+          if (deleteMode) {
+            if (confirm(`「${memo}」を削除しちゃう？`)) {
+              dailyMemos.splice(index, 1);
+              memos[i] = dailyMemos;
+              saveMemos(monthKey, memos);
+              renderMonth();
+            }
+          } else {
+            const newMemo = prompt('編集後の内容を入れてね！:', memo);
+            if (newMemo && newMemo.trim() !== '') {
+              dailyMemos[index] = newMemo.trim();
+              memos[i] = dailyMemos;
+              saveMemos(monthKey, memos);
+              renderMonth();
+            }
+          }
+        });
+        memoList.appendChild(memoItem);
+      });
+  
+      const addMemoBtn = document.createElement('button');
+      addMemoBtn.className = 'add-memo-btn';
+      addMemoBtn.textContent = 'メモを追加';
+      addMemoBtn.addEventListener('click', () => {
+        const memoText = prompt('メモを入力して！:').trim();
+        if (memoText) {
+          if (!memos[i]) memos[i] = [];
+          memos[i].push(memoText);
+          saveMemos(monthKey, memos);
+          renderMonth();
+        }
+      });
+  
+      dayCell.appendChild(dateTitle);
+      dayCell.appendChild(memoList);
+      dayCell.appendChild(addMemoBtn);
+      calendar.appendChild(dayCell);
+    }
+  }
+  
+  // イベント設定
+  deleteModeButton.addEventListener('click', () => {
+    deleteMode = !deleteMode;
+    deleteModeButton.textContent = deleteMode ? '🗑🔥' : '🔥';
+    renderMonth();
+  });
+  
+  prevMonthButton.addEventListener('click', () => {
+    currentMonthDate.setMonth(currentMonthDate.getMonth() - 1);
+    renderMonth();
+  });
+  
+  nextMonthButton.addEventListener('click', () => {
+    currentMonthDate.setMonth(currentMonthDate.getMonth() + 1);
+    renderMonth();
+  });
+  
+  // ESCキーで戻る
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      window.location.href = "../サイト/desaku.html";
+    }
+  });
+  </script>
+  
+</body>
+</html>
