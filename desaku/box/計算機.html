@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>APIを使った計算機</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f4f4f9;
+      margin: 0;
+    }
+
+    .calculator {
+      background-color: #ffffff;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      width: 300px;
+    }
+
+    #result {
+      width: 100%;
+      height: 50px;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+      text-align: right;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    .buttons, .api-section {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    button {
+      height: 50px;
+      font-size: 1.2rem;
+      border: none;
+      border-radius: 5px;
+      background-color: #007BFF;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .api-section button {
+      grid-column: span 4;
+      background-color: #28a745;
+    }
+
+    .api-section button:hover {
+      background-color: #218838;
+    }
+  </style>
+</head>
+<body>
+  <div class="calculator">
+    <input type="text" id="result" readonly>
+    <div class="buttons">
+      <button onclick="appendValue('1')">1</button>
+      <button onclick="appendValue('2')">2</button>
+      <button onclick="appendValue('3')">3</button>
+      <button onclick="appendValue('+')">+</button>
+      <button onclick="appendValue('4')">4</button>
+      <button onclick="appendValue('5')">5</button>
+      <button onclick="appendValue('6')">6</button>
+      <button onclick="appendValue('-')">-</button>
+      <button onclick="appendValue('7')">7</button>
+      <button onclick="appendValue('8')">8</button>
+      <button onclick="appendValue('9')">9</button>
+      <button onclick="appendValue('*')">*</button>
+      <button onclick="appendValue('0')">0</button>
+      <button onclick="clearResult()">C</button>
+      <button onclick="calculate()">=</button>
+      <button onclick="appendValue('/')">/</button>
+    </div>
+    <div class="api-section">
+      <button onclick="useApi()">APIで計算</button>
+    </div>
+  </div>
+
+  <script>
+    let resultField = document.getElementById("result");
+
+    // 入力値を追加
+    function appendValue(value) {
+      resultField.value += value;
+    }
+
+    // 入力値をクリア
+    function clearResult() {
+      resultField.value = '';
+    }
+
+    // 計算を実行
+    function calculate() {
+      try {
+        resultField.value = eval(resultField.value);
+      } catch (error) {
+        alert("エラー: 正しい式を入力してください");
+      }
+    }
+
+    // APIで計算
+    async function useApi() {
+      const expression = resultField.value;
+      if (!expression) {
+        alert("計算式を入力してください！");
+        return;
+      }
+
+      try {
+        const response = await fetch("https://api.mathjs.org/v4/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ expr: expression })
+        });
+
+        const data = await response.json();
+        resultField.value = data.result;
+      } catch (error) {
+        alert("APIによる計算に失敗しました。");
+      }
+    }
+
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        window.location.href = "../box/index.html";
+      }
+    });
+  </script>
+</body>
+</html>

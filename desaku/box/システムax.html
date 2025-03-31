@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>口座管理 & 通貨変換システム</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; text-align: center; }
+        .container { width: 400px; margin: auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
+        input, select, button { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; }
+        button { background-color: #007BFF; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        .balance { font-weight: bold; font-size: 20px; }
+        .positive { color: green; }
+        .negative { color: red; }
+        #message { margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>口座管理 & 通貨変換</h2>
+        <p>現在の残高: <span class="balance" id="balance">****</span> 円 <button onclick="toggleBalance()">表示/非表示</button></p>
+
+        <label>金額を入力:</label>
+        <input type="number" id="amount" min="1" step="1" placeholder="整数で入力">
+
+        <button onclick="transaction('deposit')">入金</button>
+        <button onclick="transaction('withdraw')">出金</button>
+        <button onclick="resetBalance()">リセット</button>
+
+        <h3>取引履歴</h3>
+        <ul id="history"></ul>
+
+        <h3>日本円 → 外貨 変換</h3>
+        <select id="currency">
+            <option value="USD">アメリカドル (USD)</option>
+            <option value="EUR">ユーロ (EUR)</option>
+            <option value="GBP">イギリスポンド (GBP)</option>
+            <option value="AUD">オーストラリアドル (AUD)</option>
+            <option value="CAD">カナダドル (CAD)</option>
+        </select>
+        <button onclick="convertToForeign()">変換</button>
+        <h3 id="convertedResult"></h3>
+
+        <h3>外貨 → 日本円 変換</h3>
+        <input type="number" id="foreignAmount" min="0" step="0.01" placeholder="外貨の金額を入力">
+        <select id="foreignCurrency">
+            <option value="USD">アメリカドル (USD)</option>
+            <option value="EUR">ユーロ (EUR)</option>
+            <option value="GBP">イギリスポンド (GBP)</option>
+            <option value="AUD">オーストラリアドル (AUD)</option>
+            <option value="CAD">カナダドル (CAD)</option>
+        </select>
+        <button onclick="convertToYen()">円に変換</button>
+        <h3 id="yenResult"></h3>
+
+        <p id="message"></p>
+    </div>
+    <script>
+        const DB_NAME = "AccountDB";
+        const STORE_NAME = "accountStore";
+        let db;
+        let balance = 10000n;
+        let balanceVisible = false;
+    
+        // 初期レート (API取得前のデフォルト)
+        let rates = {
+            USD: 0.007,
+            EUR: 0.0065,
+            GBP: 0.0055,
+            AUD: 0.010,
+            CAD: 0.009
+        };
+    
+        const API_KEY = "YOUR_API_KEY"; // ここにAPIキーを入れてください
+        const API_URL = `https://v6.exchangerate-api.com/v6/${API_KEY}/latest/JPY`;
+    
+        async function fetchRates() {
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                if (data && data.conversion_rates) {
+                    rates = {
+                        USD: data.conversion_rates.USD,
+                        EUR: data.conversion_rates.EUR,
+                        GBP: data.conversion_rates.GBP,
+                        AUD: data.conversion_rates.AUD,
+                        CAD: data.conversion_rates.CAD
+                    };
+                    console.log("最新レート取得:", rates);
+                }
+            } catch (error) {
+                console.error("為替レート取得エラー", error);
+                showMessage("為替レートの取得に失敗しました。デフォルトレートを使用します。", "error");
+            }
+        }
+    
+        function initDB() {
+            const request = indexedDB.open(DB_NAME, 1);
+    
+            request.onupgradeneeded = function (e) {
+                db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    const store = db.createObjectStore(STORE_NAME, { keyPath: "key" });
+                    store.createIndex("key", "key", { unique: true });
+                }
+            };
+    
+            request.onsuccess = function (e) {
+                db = e.target.result;
+                loadData();
+            };
+    
+            request.onerror = function (e) {
+                console.error("DBエラー", e);
+            };
+        }
+    
+        function loadData() {
+            getItem("balance", (data) => {
+                if (data) balance = BigInt(data.value);
+                updateBalance();
+            });
+    
+            getItem("history", (data) => {
+                const history = data ? JSON.parse(data.value) : [];
+                updateHistory(history);
+            });
+        }
+    
+        function getItem(key, callback) {
+            const tx = db.transaction(STORE_NAME, "readonly");
+            const store = tx.objectStore(STORE_NAME);
+            const req = store.get(key);
+            req.onsuccess = () => callback(req.result);
+        }
+    
+        function setItem(key, value) {
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            const store = tx.objectStore(STORE_NAME);
+            store.put({ key, value });
+        }
+    
+        function updateBalance() {
+            const balanceElem = document.getElementById('balance');
+            if (!balanceElem) return;
+            balanceElem.innerText = balanceVisible ? balance.toString() : "****";
+            balanceElem.className = balance >= 0n ? "balance positive" : "balance negative";
+        }
+    
+        function toggleBalance() {
+            balanceVisible = !balanceVisible;
+            updateBalance();
+        }
+    
+        function transaction(type) {
+            const amountInput = document.getElementById('amount');
+            if (!amountInput) return;
+            const amount = amountInput.value.trim();
+            if (!amount.match(/^\d+$/)) {
+                showMessage("正しい整数を入力してください", "error");
+                return;
+            }
+            const amountInt = BigInt(amount);
+            if (amountInt <= 0n) {
+                showMessage("金額は1円以上を入力してください", "error");
+                return;
+            }
+            balance = type === 'deposit' ? balance + amountInt : balance - amountInt;
+            setItem("balance", balance.toString());
+            updateBalance();
+            addHistory(`${amountInt}円を${type === 'deposit' ? "入金" : "出金"}`);
+        }
+    
+        function addHistory(entry) {
+            getItem("history", (data) => {
+                let history = data ? JSON.parse(data.value) : [];
+                history.unshift(entry);
+                if (history.length > 10) history.pop();
+                setItem("history", JSON.stringify(history));
+                updateHistory(history);
+            });
+        }
+    
+        function updateHistory(history) {
+            const historyElem = document.getElementById("history");
+            if (!historyElem) return;
+            historyElem.innerHTML = "";
+            history.forEach(entry => {
+                const li = document.createElement("li");
+                li.textContent = entry;
+                historyElem.appendChild(li);
+            });
+        }
+    
+        function resetBalance() {
+            if (confirm("残高を初期状態(10000円)にリセットしますか?")) {
+                balance = 10000n;
+                setItem("balance", balance.toString());
+                setItem("history", JSON.stringify([]));
+                updateBalance();
+                updateHistory([]);
+            }
+        }
+    
+        function convertToForeign() {
+            const currencyElem = document.getElementById('currency');
+            const resultElement = document.getElementById('convertedResult');
+            if (!currencyElem || !resultElement) return;
+            const currency = currencyElem.value;
+            let convertedAmount = (Number(balance) * rates[currency]).toFixed(2);
+            resultElement.textContent = `現在の残高 ${balance} 円 は ${convertedAmount} ${currency} です。`;
+        }
+    
+        function convertToYen() {
+            const foreignAmountElem = document.getElementById('foreignAmount');
+            const currencyElem = document.getElementById('foreignCurrency');
+            const resultElement = document.getElementById('yenResult');
+            if (!foreignAmountElem || !currencyElem || !resultElement) return;
+            const foreignAmount = parseFloat(foreignAmountElem.value);
+            const currency = currencyElem.value;
+            let yenAmount = (foreignAmount / rates[currency]).toFixed(2);
+            resultElement.textContent = `${foreignAmount} ${currency} は 約 ${yenAmount} 円 です。`;
+        }
+    
+        function showMessage(message, type) {
+            alert(message); // ここは仮でalert、カスタムUIがあれば差し替え可
+        }
+    
+        document.addEventListener('DOMContentLoaded', () => {
+            initDB();
+            fetchRates(); // APIから為替レート取得
+        });
+    
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = "../box/index.html";
+            }
+        });
+    </script>
+    
+</body>
+</html>

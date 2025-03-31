@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画像色変更ツール</title>
+    <style>
+        canvas { max-width: 100%; border: 1px solid #000; }
+        .color-display {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 1px solid #000;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <input type="file" id="imageLoader" accept="image/*">
+    <label>変更前の色: <span class="color-display" id="originalColor"></span></label>
+    <input type="color" id="originalColorPicker">
+    <label>変更後の色: <span class="color-display" id="newColor"></span></label>
+    <input type="color" id="newColorPicker">
+    <input type="range" id="threshold" min="0" max="255" value="50">
+    <label for="opacity">透明度:</label>
+    <input type="range" id="opacity" min="0" max="1" step="0.1" value="1">
+    <button id="applyChange">変更</button>
+    <button id="undo">元に戻す</button>
+    <button id="clearStorage">クリア</button>
+    <canvas id="canvas"></canvas>
+    <button id="saveImage">保存</button>
+    
+    <label for="storedImages">保存画像を選択:</label>
+    <select id="storedImages"></select>
+    <button id="loadImage">読み込む</button>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const imageLoader = document.getElementById('imageLoader');
+        const originalColorPicker = document.getElementById('originalColorPicker');
+        const newColorPicker = document.getElementById('newColorPicker');
+        const threshold = document.getElementById('threshold');
+        const opacity = document.getElementById('opacity');
+        const applyChange = document.getElementById('applyChange');
+        const undoButton = document.getElementById('undo');
+        const clearStorage = document.getElementById('clearStorage');
+        const saveImage = document.getElementById('saveImage');
+        const storedImagesSelect = document.getElementById('storedImages');
+        const loadImageButton = document.getElementById('loadImage');
+
+        let image = new Image();
+        let history = [];
+        let uniqueKey = null;
+
+        // 画像を選択して読み込んだとき
+        imageLoader.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                uniqueKey = "savedImage_" + Date.now(); // 一意のキーを設定
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    image.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        image.onload = function() {
+            const scale = 600 / image.width; // 横幅600pxに合わせる
+            canvas.width = 600;
+            canvas.height = image.height * scale;
+            ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+            saveToLocalStorage();
+            saveToHistory();
+            updateStoredImagesDropdown();
+        };
+
+        // ローカルストレージに画像を保存
+        function saveToLocalStorage() {
+            if (!uniqueKey) return;
+
+            try {
+                localStorage.setItem(uniqueKey, canvas.toDataURL());
+            } catch (e) {
+                console.warn("LocalStorage に保存できませんでした", e);
+            }
+        }
+
+        // ローカルストレージ内の画像データをすべて取得
+        function getAllStoredImages() {
+            let storedImages = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                let key = localStorage.key(i);
+                let value = localStorage.getItem(key);
+
+                if (value.startsWith("data:image")) { // 画像データのみ取得
+                    storedImages.push({ key, value });
+                }
+            }
+            return storedImages;
+        }
+
+        // ローカルストレージの画像一覧を更新
+        function updateStoredImagesDropdown() {
+            storedImagesSelect.innerHTML = "";
+            let storedImages = getAllStoredImages();
+
+            storedImages.forEach(({ key }) => {
+                let option = document.createElement("option");
+                option.value = key;
+                option.textContent = key;
+                storedImagesSelect.appendChild(option);
+            });
+
+            if (storedImages.length > 0) {
+                storedImagesSelect.value = storedImages[storedImages.length - 1].key; // 最新画像を選択
+            }
+        }
+
+        // 最新の画像をロード
+        function loadLatestImage() {
+            let storedImages = getAllStoredImages();
+            if (storedImages.length > 0) {
+                let latestImage = storedImages[storedImages.length - 1];
+                let img = new Image();
+                img.src = latestImage.value;
+                img.onload = function() {
+                    const scale = 600 / img.width;
+                    canvas.width = 600;
+                    canvas.height = img.height * scale;
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                };
+            }
+        }
+
+        // 選択した画像をロード
+        loadImageButton.addEventListener('click', function() {
+            let selectedKey = storedImagesSelect.value;
+            let savedData = localStorage.getItem(selectedKey);
+
+            if (savedData) {
+                let img = new Image();
+                img.src = savedData;
+                img.onload = function() {
+                    const scale = 600 / img.width;
+                    canvas.width = 600;
+                    canvas.height = img.height * scale;
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                };
+            }
+        });
+
+        // 元に戻す
+        undoButton.addEventListener('click', function() {
+            if (history.length > 1) {
+                history.pop();
+                let prevImage = new Image();
+                prevImage.src = history[history.length - 1];
+                prevImage.onload = function() {
+                    ctx.drawImage(prevImage, 0, 0);
+                };
+            }
+        });
+
+        // クリアボタン
+        clearStorage.addEventListener('click', function() {
+            localStorage.clear();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            history = [];
+            updateStoredImagesDropdown();
+        });
+
+        // 画像を保存
+        saveImage.addEventListener('click', function() {
+            const link = document.createElement('a');
+            link.download = 'edited_image.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+
+        // 初期化処理
+        updateStoredImagesDropdown();
+        loadLatestImage();
+
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = "../box/index.html";
+            }
+        });
+    </script>
+</body>
+</html>

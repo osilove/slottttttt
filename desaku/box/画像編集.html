@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画像編集ツール</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid #000;
+            cursor: default;
+        }
+        #controls {
+            margin: 10px;
+        }
+        input, button {
+            margin: 5px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h2>画像編集ツール</h2>
+    <div id="controls">
+        <input type="file" id="bgImageLoader" accept="image/*" class="hidden">
+        <input type="file" id="overlayImageLoader" accept="image/*" class="hidden">
+        <button onclick="triggerImageLoader('bgImageLoader')">背景画像を選択</button>
+        <button onclick="triggerImageLoader('overlayImageLoader')">追加画像を選択</button>
+        <button onclick="addSelectedImage()">画像を追加</button>
+        <button onclick="saveImage()">画像を保存</button>
+        <button onclick="clearCanvas()">クリア</button>
+        <button onclick="loadFromLocal()">ローカル読み込み</button>
+        <button onclick="toggleBrush()">ブラシを使用</button>
+        <div id="brushControls" class="hidden">
+            <input type="color" id="colorPicker" value="#000000">
+            <input type="range" id="brushSize" min="1" max="10" value="3">
+        </div>
+    </div>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        const bgImageLoader = document.getElementById("bgImageLoader");
+        const overlayImageLoader = document.getElementById("overlayImageLoader");
+        const colorPicker = document.getElementById("colorPicker");
+        const brushSize = document.getElementById("brushSize");
+        const brushControls = document.getElementById("brushControls");
+        const storageKey = "imageEditorCanvas";
+
+        let painting = false;
+        let usingBrush = false;
+        let bgImage = null;
+        let images = [];
+        let selectedImageFile = null;
+
+        function initCanvas() {
+            canvas.width = 800;
+            canvas.height = 600;
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        bgImageLoader.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                bgImage.onload = () => {
+    let bgWidth = bgImage.width;
+    let bgHeight = bgImage.height;
+    const ratio = Math.min(600 / bgWidth, 600 / bgHeight); // 横幅600pxに収める
+    bgWidth *= ratio;
+    bgHeight *= ratio;
+    bgImage.width = bgWidth;
+    bgImage.height = bgHeight;
+    
+    redrawCanvas();
+    saveToLocal();
+};
+
+                bgImage.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        overlayImageLoader.addEventListener("change", (e) => {
+            selectedImageFile = e.target.files[0]; // 追加用の画像を保存
+        });
+
+        function triggerImageLoader(inputId) {
+            document.getElementById(inputId).click();
+        }
+
+        function addSelectedImage() {
+            const maxWidth = 600; // 追加画像の最大幅を600pxに
+const maxHeight = 600;
+let width = img.width;
+let height = img.height;
+if (width > maxWidth || height > maxHeight) {
+    const ratio = Math.min(maxWidth / width, maxHeight / height);
+    width *= ratio;
+    height *= ratio;
+}
+
+            if (!selectedImageFile) {
+                alert("画像を選択してください！");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const maxWidth = 200;
+                    const maxHeight = 200;
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > maxWidth || height > maxHeight) {
+                        const ratio = Math.min(maxWidth / width, maxHeight / height);
+                        width *= ratio;
+                        height *= ratio;
+                    }
+                    images.push({ img, x: 100 + images.length * 20, y: 100 + images.length * 20, width, height });
+                    redrawCanvas();
+                    saveToLocal();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(selectedImageFile);
+            selectedImageFile = null; // 追加後、選択をリセット
+        }
+
+        function redrawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if (bgImage) {
+                let bgWidth = bgImage.width;
+                let bgHeight = bgImage.height;
+                const ratio = Math.min(canvas.width / bgWidth, canvas.height / bgHeight);
+                bgWidth *= ratio;
+                bgHeight *= ratio;
+                const x = (canvas.width - bgWidth) / 2;
+                const y = (canvas.height - bgHeight) / 2;
+                ctx.drawImage(bgImage, x, y, bgWidth, bgHeight);
+            }
+
+            images.forEach(({ img, x, y, width, height }) => {
+                ctx.drawImage(img, x, y, width, height);
+            });
+        }
+
+        let selectedImage = null;
+        let offsetX = 0, offsetY = 0;
+
+        canvas.addEventListener("mousedown", (e) => {
+            const { offsetX: x, offsetY: y } = e;
+            selectedImage = images.findLast(img =>
+                x >= img.x && x <= img.x + img.width &&
+                y >= img.y && y <= img.y + img.height
+            );
+
+            if (selectedImage) {
+                offsetX = x - selectedImage.x;
+                offsetY = y - selectedImage.y;
+            } else if (usingBrush) {
+                painting = true;
+            }
+        });
+
+        canvas.addEventListener("mouseup", () => {
+            painting = false;
+            if (selectedImage) {
+                saveToLocal();
+            }
+            selectedImage = null;
+            ctx.beginPath();
+        });
+
+        canvas.addEventListener("mousemove", (e) => {
+            if (selectedImage) {
+                selectedImage.x = e.offsetX - offsetX;
+                selectedImage.y = e.offsetY - offsetY;
+                redrawCanvas();
+            } else if (painting && usingBrush) {
+                ctx.lineWidth = brushSize.value;
+                ctx.lineCap = "round";
+                ctx.strokeStyle = colorPicker.value;
+                ctx.lineTo(e.offsetX, e.offsetY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(e.offsetX, e.offsetY);
+            }
+        });
+
+        function saveImage() {
+            const link = document.createElement("a");
+            link.download = "edited_image.png";
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        function clearCanvas() {
+            bgImage = null;
+            images = [];
+            redrawCanvas();
+            localStorage.removeItem(storageKey);
+        }
+
+        function saveToLocal() {
+            const data = {
+                bgImage: bgImage ? bgImage.src : null,
+                images: images.map(img => ({
+                    src: img.img.src,
+                    x: img.x,
+                    y: img.y,
+                    width: img.width,
+                    height: img.height
+                }))
+            };
+            localStorage.setItem(storageKey, JSON.stringify(data));
+        }
+
+        function loadFromLocal() {
+            const data = JSON.parse(localStorage.getItem(storageKey));
+            if (data) {
+                images = [];
+                if (data.bgImage) {
+                    bgImage = new Image();
+                    bgImage.onload = redrawCanvas;
+                    bgImage.src = data.bgImage;
+                }
+                data.images.forEach(imgData => {
+                    const img = new Image();
+                    img.onload = () => {
+                        images.push({ img, x: imgData.x, y: imgData.y, width: imgData.width, height: imgData.height });
+                        redrawCanvas();
+                    };
+                    img.src = imgData.src;
+                });
+            } else {
+                alert("保存データがありません");
+            }
+        }
+
+        function toggleBrush() {
+            usingBrush = !usingBrush;
+            brushControls.classList.toggle("hidden", !usingBrush);
+            canvas.style.cursor = usingBrush ? "crosshair" : "default";
+        }
+
+        initCanvas();
+
+        window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        window.location.href = "../box/index.html";
+      }
+    });
+    </script>
+</body>
+</html>

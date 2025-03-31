@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ツールのやつ</title>
+    <style>
+        /* あなたのCSSそのまま適用 */
+        body,
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        p,
+        span,
+        li,
+        button,
+        input,
+        select {
+            color: rgb(12, 213, 35) !important;
+            font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif !important;
+            text-shadow:
+                -1px -1px 0 red,
+                1px -1px 0 red,
+                -1px 1px 0 red,
+                1px 1px 0 red;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            font-size: 100%;
+            background-image: url('bg.jpg');
+            background-size: cover;
+            background-position: top center;
+            background-repeat: repeat;
+            height: 100vh;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            background: none;
+            color: white;
+            padding: 10px;
+        }
+
+        .menu-btn {
+            font-size: 24px;
+            background: none;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-right: 20px;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: -200px;
+            top: 0;
+            width: 200px;
+            height: 100%;
+            background: #444;
+            padding-top: 60px;
+            transition: left 0.3s;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .sidebar ul li {
+            padding: 15px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .sidebar ul li:hover {
+            background: #666;
+        }
+
+        main {
+            margin-left: 20px;
+            padding: 20px;
+        }
+
+        .tool {
+            display: none;
+        }
+
+        .todo-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px;
+        }
+
+        .delete-btn {
+            background: red;
+            color: white;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        .calendar-container {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0px;
+            background-color: #ddd 0.2;
+            margin: 10px;
+            border: 1px solid #ccc 0.2;
+        }
+
+        .calendar-day,
+        .calendar-header {
+            background-color: #f9f9f9 0.2;
+            padding: 10px;
+            text-align: center;
+            font-size: 12px;
+            min-height: 100px;
+        }
+
+        .calendar-header {
+            font-weight: bold;
+            background-color: #f0f0f0 0.2;
+        }
+
+        .calendar-day {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: flex-start;
+            background-color: white 0.2;
+            border: 1px solid #ddd 0.2;
+            position: relative;
+        }
+
+        .calendar-day .memo {
+            font-size: 10px;
+            background: #eef;
+            margin-top: 5px;
+            width: 100%;
+            padding: 2px;
+        }
+
+        .budget-container {
+            text-align: left;
+            max-width: 400px;
+            margin: auto;
+        }
+
+        .budget-container input,
+        .budget-container select,
+        .budget-container button {
+            display: block;
+            width: 100%;
+            margin: 5px 0;
+            padding: 5px;
+        }
+
+        .budget-list {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body onclick="closeMenu(event)">
+    <header>
+        <button class="menu-btn" onclick="toggleMenu(event)">☰</button>
+        <h1>ツール</h1>
+    </header>
+
+    <nav class="sidebar">
+        <ul>
+            <li onclick="showTool('todo')">ToDoリスト</li>
+            <li onclick="showTool('calendar')">カレンダー</li>
+            <li onclick="showTool('budget')">家計簿</li>
+        </ul>
+    </nav>
+
+    <main>
+        <section id="todo" class="tool">
+            <h2>ToDoリスト</h2>
+            <input type="text" id="taskInput" placeholder="タスクを入力">
+            <button onclick="addTask()">追加</button>
+            <ul id="taskList"></ul>
+        </section>
+
+        <section id="calendar" class="tool">
+            <h2>カレンダー</h2>
+            <button id="prevMonth">← 前の月</button>
+            <span id="currentMonth"></span>
+            <button id="nextMonth">次の月 →</button>
+            <div id="calendarContainer" class="calendar-container"></div>
+        </section>
+
+        <section id="budget" class="tool">
+            <h2>家計簿</h2>
+            <div class="budget-container">
+                <input type="number" id="amount" placeholder="金額を入力">
+                <select id="category">
+                    <option value="収入">収入</option>
+                    <option value="食費">食費</option>
+                    <option value="交通費">交通費</option>
+                    <option value="娯楽">娯楽</option>
+                    <option value="その他">その他</option>
+                </select>
+                <button onclick="addBudgetItem()">追加</button>
+                <ul id="budgetList" class="budget-list"></ul>
+                <p>合計: <span id="totalAmount">0</span> 円</p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let db;
+        const request = indexedDB.open("ToolDB", 1);
+
+        request.onupgradeneeded = function (event) {
+            db = event.target.result;
+            db.createObjectStore("todoStore", { keyPath: "id", autoIncrement: true });
+            db.createObjectStore("budgetStore", { keyPath: "id", autoIncrement: true });
+            db.createObjectStore("calendarMemos", { keyPath: "date" });
+        };
+
+        request.onsuccess = function (event) {
+            db = event.target.result;
+            loadTasks();
+            loadBudget();
+            renderCalendar();
+        };
+
+        // メニュー開閉
+        function toggleMenu(event) {
+            event.stopPropagation();
+            let sidebar = document.querySelector(".sidebar");
+            sidebar.style.left = (sidebar.style.left === "0px") ? "-200px" : "0px";
+        }
+
+        function closeMenu(event) {
+            let sidebar = document.querySelector(".sidebar");
+            if (!event.target.closest('.sidebar') && !event.target.closest('.menu-btn')) {
+                sidebar.style.left = "-200px";
+            }
+        }
+
+        function showTool(toolId) {
+            document.querySelectorAll(".tool").forEach(tool => tool.style.display = "none");
+            document.getElementById(toolId).style.display = "block";
+        }
+
+        // ---------------------- ToDo機能 (indexedDB) ----------------------
+        function addTask() {
+            const taskInput = document.getElementById("taskInput");
+            if (taskInput.value.trim() === "") return;
+            const tx = db.transaction('todoStore', 'readwrite');
+            const store = tx.objectStore('todoStore');
+            store.add({ text: taskInput.value });
+            tx.oncomplete = () => {
+                taskInput.value = "";
+                loadTasks();
+            };
+        }
+
+        function loadTasks() {
+            const taskList = document.getElementById("taskList");
+            taskList.innerHTML = "";
+            const tx = db.transaction('todoStore', 'readonly');
+            const store = tx.objectStore('todoStore');
+            store.openCursor().onsuccess = e => {
+                const cursor = e.target.result;
+                if (cursor) {
+                    const li = document.createElement("li");
+                    li.classList.add("todo-item");
+                    const span = document.createElement("span");
+                    span.textContent = cursor.value.text;
+                    const btn = document.createElement("button");
+                    btn.textContent = "×";
+                    btn.classList.add("delete-btn");
+                    btn.onclick = () => { deleteTask(cursor.key); };
+                    li.appendChild(span);
+                    li.appendChild(btn);
+                    taskList.appendChild(li);
+                    cursor.continue();
+                }
+            };
+        }
+
+        function deleteTask(id) {
+            const tx = db.transaction('todoStore', 'readwrite');
+            const store = tx.objectStore('todoStore');
+            store.delete(id);
+            tx.oncomplete = () => loadTasks();
+        }
+
+        // ---------------------- 家計簿機能 (indexedDB) ----------------------
+        function addBudgetItem() {
+            let amount = parseInt(document.getElementById("amount").value.trim(), 10);
+            let category = document.getElementById("category").value;
+            if (isNaN(amount)) return;
+            if (category !== "収入") {
+                amount = -Math.abs(amount);
+            }
+            const tx = db.transaction('budgetStore', 'readwrite');
+            const store = tx.objectStore('budgetStore');
+            store.add({ category, amount });
+            tx.oncomplete = () => {
+                document.getElementById("amount").value = "";
+                loadBudget();
+            };
+        }
+
+        function loadBudget() {
+            const budgetList = document.getElementById("budgetList");
+            budgetList.innerHTML = "";
+            let total = 0;
+            const tx = db.transaction('budgetStore', 'readonly');
+            const store = tx.objectStore('budgetStore');
+            store.openCursor().onsuccess = e => {
+                const cursor = e.target.result;
+                if (cursor) {
+                    const li = document.createElement("li");
+                    li.textContent = `${cursor.value.category}: ${cursor.value.amount} 円`;
+                    const btn = document.createElement("button");
+                    btn.textContent = "×";
+                    btn.onclick = () => { deleteBudget(cursor.key); };
+                    li.appendChild(btn);
+                    budgetList.appendChild(li);
+                    total += cursor.value.amount;
+                    cursor.continue();
+                } else {
+                    document.getElementById("totalAmount").textContent = total;
+                }
+            };
+        }
+
+        function deleteBudget(id) {
+            const tx = db.transaction('budgetStore', 'readwrite');
+            const store = tx.objectStore('budgetStore');
+            store.delete(id);
+            tx.oncomplete = () => loadBudget();
+        }
+
+        // ---------------------- カレンダー機能 + メモ ----------------------
+        const today = new Date();
+        let currentMonthDate = new Date(today.getFullYear(), today.getMonth(), 1);
+
+        function renderCalendar() {
+            const calendarContainer = document.getElementById("calendarContainer");
+            calendarContainer.innerHTML = "";
+            const year = currentMonthDate.getFullYear();
+            const month = currentMonthDate.getMonth();
+            document.getElementById("currentMonth").textContent = `${year}年${month + 1}月`;
+
+            const headers = ["日", "月", "火", "水", "木", "金", "土"];
+            headers.forEach(day => {
+                const header = document.createElement("div");
+                header.classList.add("calendar-header");
+                header.textContent = day;
+                calendarContainer.appendChild(header);
+            });
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDay; i++) {
+                const emptyCell = document.createElement("div");
+                emptyCell.classList.add("calendar-day");
+                calendarContainer.appendChild(emptyCell);
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateKey = `${year}-${month + 1}-${day}`;
+                const dayCell = document.createElement("div");
+                dayCell.classList.add("calendar-day");
+                dayCell.innerHTML = `<div><strong>${day}</strong></div>`;
+                calendarContainer.appendChild(dayCell);
+
+                // メモを読み込む
+                const tx = db.transaction('calendarMemos', 'readonly');
+                const store = tx.objectStore('calendarMemos');
+                const req = store.get(dateKey);
+                req.onsuccess = () => {
+                    if (req.result) {
+                        const memoDiv = document.createElement("div");
+                        memoDiv.className = "memo";
+                        memoDiv.textContent = req.result.text;
+                        dayCell.appendChild(memoDiv);
+                    }
+                };
+
+                dayCell.addEventListener("click", () => {
+                    const text = prompt("この日のメモ:");
+                    if (text !== null) {
+                        const tx2 = db.transaction('calendarMemos', 'readwrite');
+                        const store2 = tx2.objectStore('calendarMemos');
+                        store2.put({ date: dateKey, text });
+                        tx2.oncomplete = () => renderCalendar();
+                    }
+                });
+            }
+        }
+
+        document.getElementById("prevMonth").addEventListener("click", () => {
+            currentMonthDate.setMonth(currentMonthDate.getMonth() - 1);
+            renderCalendar();
+        });
+
+        document.getElementById("nextMonth").addEventListener("click", () => {
+            currentMonthDate.setMonth(currentMonthDate.getMonth() + 1);
+            renderCalendar();
+        });
+
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = "../box/index.html";
+            }
+        });
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>色指定抽出ツール</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        canvas { border: 1px solid #000; max-width: 100%; height: auto; cursor: crosshair; }
+        #controls { margin: 10px; }
+    </style>
+</head>
+<body>
+
+    <h2>色指定抽出ツール</h2>
+    <input type="file" id="imageInput" accept="image/*">
+    <div id="controls">
+        <button id="colorPicker">スポイトで色を選択</button>
+        <button id="extractOnly">抽出のみ</button>
+        <button id="extractWithOCR">指定色でOCR</button>
+        <button id="ocrOnly">OCRのみ</button>
+        <button id="clearCanvas">クリア</button>
+        <button id="saveImage">画像を保存</button>
+        <br><br>
+        <label>色の許容範囲（閾値）: <span id="toleranceValue">30</span></label>
+        <input type="range" id="tolerance" min="0" max="100" value="30">
+        <br>
+        <div id="pickedColor" style="display:inline-block; width:50px; height:50px; border:1px solid #000;"></div>
+    </div>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        let selectedColor = null;
+        let tolerance = 30;
+        const imageInput = document.getElementById("imageInput");
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        const toleranceSlider = document.getElementById("tolerance");
+        const toleranceValue = document.getElementById("toleranceValue");
+
+        window.onload = function() {
+            const savedImage = localStorage.getItem("savedImage");
+            const savedColor = localStorage.getItem("selectedColor");
+            const savedTolerance = localStorage.getItem("tolerance");
+
+            if (savedImage) {
+                const img = new Image();
+                img.src = savedImage;
+                img.onload = function() {
+                    resizeImage(img);
+                };
+            }
+
+            if (savedColor) {
+                selectedColor = JSON.parse(savedColor);
+                document.getElementById("pickedColor").style.backgroundColor = `rgb(${selectedColor.r}, ${selectedColor.g}, ${selectedColor.b})`;
+            }
+
+            if (savedTolerance) {
+                tolerance = parseInt(savedTolerance);
+                toleranceSlider.value = tolerance;
+                toleranceValue.textContent = tolerance;
+            }
+        };
+
+        imageInput.addEventListener("change", function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.src = e.target.result;
+                img.onload = function() {
+                    resizeImage(img);
+                    localStorage.setItem("savedImage", img.src);
+                };
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function resizeImage(img) {
+            const maxWidth = 600;
+            const scale = maxWidth / img.width;
+            const newWidth = maxWidth;
+            const newHeight = img.height * scale;
+
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+            ctx.drawImage(img, 0, 0, newWidth, newHeight);
+        }
+
+        document.getElementById("colorPicker").addEventListener("click", function() {
+            canvas.addEventListener("click", pickColor);
+        });
+
+        function pickColor(event) {
+            const x = event.offsetX;
+            const y = event.offsetY;
+            const imageData = ctx.getImageData(x, y, 1, 1);
+            const [r, g, b] = imageData.data;
+            selectedColor = { r, g, b };
+            document.getElementById("pickedColor").style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+
+            localStorage.setItem("selectedColor", JSON.stringify(selectedColor));
+            canvas.removeEventListener("click", pickColor);
+        }
+
+        toleranceSlider.addEventListener("input", function(event) {
+            tolerance = parseInt(event.target.value);
+            toleranceValue.textContent = tolerance;
+            localStorage.setItem("tolerance", tolerance);
+        });
+
+        function applyColorFilter(callback) {
+            if (!selectedColor) {
+                alert("スポイトで色を選択してください");
+                return;
+            }
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+
+                const distance = Math.sqrt(
+                    Math.pow(r - selectedColor.r, 2) +
+                    Math.pow(g - selectedColor.g, 2) +
+                    Math.pow(b - selectedColor.b, 2)
+                );
+
+                if (distance > tolerance) {
+                    data[i] = 255;
+                    data[i + 1] = 255;
+                    data[i + 2] = 255;
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+
+            if (callback) {
+                setTimeout(callback, 100);
+            }
+        }
+
+        function runOCR() {
+            Tesseract.recognize(canvas.toDataURL(), 'jpn+eng', {
+                logger: m => console.log(m),
+                tessedit_pageseg_mode: 6,
+                tessedit_ocr_engine_mode: 3
+            }).then(({ data: { text, words } }) => {
+                console.log("認識結果:", text);
+
+                ctx.fillStyle = "rgba(255, 0, 0, 0.8)";
+                ctx.font = "20px Arial";
+                words.forEach(word => {
+                    const { x0, y0 } = word.bbox;
+                    ctx.fillText(word.text, x0, y0);
+                });
+            });
+        }
+
+        document.getElementById("extractOnly").addEventListener("click", function() {
+            applyColorFilter();
+        });
+
+        document.getElementById("extractWithOCR").addEventListener("click", function() {
+            applyColorFilter(() => {
+                runOCR();
+            });
+        });
+
+        document.getElementById("ocrOnly").addEventListener("click", function() {
+            runOCR();
+        });
+
+        document.getElementById("clearCanvas").addEventListener("click", function() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            localStorage.removeItem("savedImage");
+            localStorage.removeItem("selectedColor");
+            localStorage.removeItem("tolerance");
+        });
+
+        document.getElementById("saveImage").addEventListener("click", function() {
+            const link = document.createElement("a");
+            link.download = "canvas_image.png";
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        });
+
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = "../box/index.html";
+            }
+        });
+    </script>
+
+</body>
+</html>

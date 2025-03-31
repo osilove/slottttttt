@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>フォント</title>
+    <style>
+       body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            margin: 0;
+            padding: 0;
+            font-size: 100%;
+            background-image: url('../スライぃド/img/3.jpg'); /* 背景画像のURL */
+            background-size: cover; /* 画面全体をカバー */
+            background-position: top center; /* 画像の上端をサイトの上端に合わせる */
+            background-repeat: no-repeat; /* 繰り返しなし */
+            height: 100vh; /* 画面の高さを100%に設定 */
+        }
+
+        #textInput { width: 80%; padding: 10px; font-size: 18px; }
+        #copyButton { margin-top: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <input type="text" id="textInput" placeholder="ここに入力">
+    <br>
+    <button id="copyButton">コピー</button>
+
+    <script>
+        const textInput = document.getElementById("textInput");
+        const copyButton = document.getElementById("copyButton");
+
+        // 使用可能なフォントリスト
+        const fonts = [
+            "Arial", "Courier New", "Georgia", "Times New Roman", "Verdana", 
+            "Trebuchet MS", "Comic Sans MS", "Impact", "Tahoma", "Lucida Console"
+        ];
+
+        let currentFontIndex = 0;  // 右クリック時のフォントインデックス
+
+        // フォント変更処理（入力領域外でキー入力時に変更）
+        document.addEventListener("keydown", (event) => {
+            if (document.activeElement !== textInput && /^[a-zA-Z0-9]$/.test(event.key)) {
+                const index = event.key.charCodeAt(0) % fonts.length; // インデックスを計算
+                textInput.style.fontFamily = fonts[index];
+            }
+        });
+
+        // 右クリック時にフォントを順番に変更
+        document.addEventListener("contextmenu", (event) => {
+            event.preventDefault();  // デフォルトの右クリックメニューを無効化
+            currentFontIndex = (currentFontIndex + 1) % fonts.length;  // 次のフォントへ
+            textInput.style.fontFamily = fonts[currentFontIndex];
+        });
+
+        // コピー処理（最新の方法に変更）
+        copyButton.addEventListener("click", async () => {
+            try {
+                await navigator.clipboard.writeText(textInput.value);
+                alert("コピーしました: " + textInput.value);
+            } catch (err) {
+                console.error("コピーに失敗しました: ", err);
+                alert("コピーに失敗しました。");
+            }
+        });
+         // ESCキーでサイトに戻る
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        window.location.href = "../box/index.html";
+      }
+    });
+    </script>
+
+</body>
+</html>

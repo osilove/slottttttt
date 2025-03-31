@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stargazing App</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #1a202c;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .card {
+      background-color: #2d3748;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 300px;
+    }
+
+    .card h2 {
+      font-size: 1.5em;
+      margin-bottom: 10px;
+    }
+
+    .card p {
+      font-size: 2em;
+      margin-top: 0;
+    }
+
+    .card img {
+      margin-top: 10px;
+      max-width: 100%;
+      border-radius: 8px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    button {
+      background-color: #4299e1;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      font-size: 1em;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #2b6cb0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Stargazing App</h1>
+  <div class="card">
+    <h2 id="month">January</h2>
+    <p id="constellation">Orion</p>
+    <img id="constellation-image" src="images/orion.jpg" alt="Orion">
+  </div>
+  <div class="controls">
+    <button id="prev">Previous</button>
+    <button id="next">Next</button>
+  </div>
+  <script>
+    const starData = {
+      January: "Orion",
+      February: "Aquarius",
+      March: "Pisces",
+      April: "Taurus",
+      May: "Gemini",
+      June: "Cancer",
+      July: "Leo",
+      August: "Virgo",
+      September: "Libra",
+      October: "Scorpion",
+      November: "Sagittarius",
+      December: "Capricorn",
+    };
+  
+    const months = Object.keys(starData);
+    let currentMonthIndex = new Date().getMonth();
+  
+    const monthElement = document.getElementById("month");
+    const constellationElement = document.getElementById("constellation");
+    const constellationImageElement = document.getElementById("constellation-image");
+  
+    const updateDisplay = async () => {
+      const currentMonth = months[currentMonthIndex];
+      const constellationName = starData[currentMonth];
+  
+      
+      monthElement.textContent = currentMonth;
+      constellationElement.textContent = constellationName;
+  
+      const updateDisplay = () => {
+  const currentMonth = months[currentMonthIndex];
+  const { name, image } = starData[currentMonth];
+
+  monthElement.textContent = currentMonth;
+  constellationElement.textContent = name;
+  constellationImageElement.src = image;
+  constellationImageElement.alt = name;
+
+  // エラーハンドリング: 画像が見つからない場合にデフォルト画像を設定
+  constellationImageElement.onerror = () => {
+    constellationImageElement.src = "images/default.jpg";
+  };
+};
+
+      // WikiMedia APIを使って星座画像を検索
+      try {
+        const response = await fetch(
+          `https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&prop=imageinfo&titles=File:${constellationName}_constellation_map.png&iiprop=url`
+        );
+        const data = await response.json();
+        const pages = data.query.pages;
+        const page = Object.values(pages)[0];
+        const imageUrl = page?.imageinfo?.[0]?.url || "default-image.jpg";
+  
+        constellationImageElement.src = imageUrl;
+        constellationImageElement.alt = constellationName;
+      } catch (error) {
+        console.error("画像を取得できませんでした:", error);
+        constellationImageElement.src = "default-image.jpg";
+        constellationImageElement.alt = "Default";
+      }
+    };
+  
+    document.getElementById("prev").addEventListener("click", () => {
+      currentMonthIndex = (currentMonthIndex - 1 + months.length) % months.length;
+      updateDisplay();
+    });
+  
+    document.getElementById("next").addEventListener("click", () => {
+      currentMonthIndex = (currentMonthIndex + 1) % months.length;
+      updateDisplay();
+    });
+  
+    updateDisplay();
+
+
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        window.location.href = "../box/index.html";
+      }
+    });
+  </script>
+  
+</body>
+</html>

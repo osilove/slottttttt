@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>素数判定ツール</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+        input {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>素数判定ツール</h1>
+    <p>数値を入力して「判定」ボタンを押してください。</p>
+    <input type="number" id="numberInput" placeholder="数値を入力">
+    <button onclick="checkPrime()">判定</button>
+    <p id="result"></p>
+
+    <script>
+        function isPrime(num) {
+            if (num < 2) return false;
+            if (num === 2) return true;
+            if (num % 2 === 0) return false;
+            for (let i = 3; i <= Math.sqrt(num); i += 2) {
+                if (num % i === 0) return false;
+            }
+            return true;
+        }
+
+        function checkPrime() {
+            let num = parseInt(document.getElementById("numberInput").value);
+            let resultText = "";
+
+            if (isNaN(num) || num < 0) {
+                resultText = "正の整数を入力してください。";
+            } else if (isPrime(num)) {
+                resultText = num + " は素数です。";
+            } else {
+                resultText = num + " は素数ではありません。";
+            }
+
+            document.getElementById("result").textContent = resultText;
+        }
+
+        window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        window.location.href = "../box/index.html";
+      }
+    });
+    </script>
+
+</body>
+</html>
