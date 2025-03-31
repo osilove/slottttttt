@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>動画まとめ</title>
+    <style>
+        /* 既存のスタイル */
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #cf12cf;
+            color: #fff;
+            transition: background-color 0.5s, color 0.5s;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 30px;
+            text-align: center;
+            background-color: #000000;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+
+        header {
+            margin-bottom: 20px;
+        }
+
+        nav {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* スライドショー部分のスタイル */
+        .slideshow-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 20px auto;
+            overflow: hidden;
+        }
+
+        .slide {
+            display: none;
+            width: 100%;
+            height: auto;
+        }
+
+        .active {
+            display: block;
+        }
+
+        .slideshow-container img {
+            width: 70px;  /* 画像の幅を100pxに設定 */
+            height: 70px; /* 画像の高さを100pxに設定 */
+            object-fit: cover; /* 画像の比率を維持してフィットさせる */
+        }
+
+        /* ボタンのスタイル */
+        .link-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 10px;
+            width: 180px;
+        }
+
+        .link-image {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+            border-radius: 4px;
+            transition: transform 0.2s;
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+        }
+
+        .link-button img {
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+        }
+
+        .link-button:hover .link-image {
+            transform: scale(1.05);
+        }
+
+        .image-display {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 20px auto;
+        }
+
+        #current-date {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* 背景色切替ボタン */
+        .toggle-button {
+            padding: 10px 20px;
+            background-color: #444;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .toggle-button:hover {
+            background-color: #666;
+        }
+
+        /*色付きボタンスタイル */
+        a {
+      display: inline-block;
+      padding: 10px 20px;
+      margin: 10px;
+      text-decoration: none;
+      font-size: 16px;
+      border-radius: 5px;
+      text-align: center;
+      transition: background-color 0.3s ease;
+    }
+    .blue-button {
+      background-color: #007bff;
+      color: white;
+    }
+    .blue-button:hover {
+      background-color: #0056b3;
+    }
+.skyblue-button{
+background-color: #00fff2;
+color: white;
+}
+.skyblue-button:hover{
+background-color: #00ffff;
+color: white;
+}
+
+    .green-button {
+      background-color: #28a745;
+      color: white;
+    }
+    .green-button:hover {
+      background-color: #218838;
+    }
+
+    .red-button {
+      background-color: #dc3545;
+      color: white;
+    }
+    .red-button:hover {
+      background-color: #c82333;
+    }
+
+    .orange-button {
+      background-color: #fd7e14;
+      color: white;
+    }
+    .orange-button:hover {
+      background-color: #e86c16;
+    }
+
+    .blue-button {
+      background-color: #e83e8c;
+      color: white;
+    }
+    .blue-button:hover {
+      background-color: #d6336c;
+    }
+
+    .yellow-button {
+      background-color: #e8d73e;
+      color: white;
+    }
+    .yellow-button:hover {
+      background-color: #d6c633;
+    }
+    .black-button {
+      background-color: #000000;
+      color: white;
+    }
+    .black-button:hover {
+      background-color: #31312d;
+    }
+        .dragon-container {
+            position: relative;
+            width: 100%;
+            height: 150px;
+            overflow: hidden;
+        }
+
+        .dragon {
+            position: absolute;
+            top: 0px;
+            left: 100%;
+            width: 120px;
+            height: auto;
+            animation: moveDragon 5s linear infinite;
+        }
+
+        @keyframes moveDragon {
+            0% {
+                left: 100%;
+            }
+            100% {
+                left: -150px;
+            }
+        }
+
+        .darman-container {
+            position: relative;
+            width: 100%;
+            height: 150px;
+            overflow: hidden;
+        }
+
+        .darman {
+            position: absolute;
+            top: 0px;
+            left: -120px; /* 初期位置を左に設定 */
+            width: 120px;
+            height: auto;
+            animation: moveDarman 1s linear infinite;
+        }
+
+        @keyframes moveDarman {
+            0% {
+                left: -120px; /* 左から開始 */
+            }
+            50% {
+                left: 100%; /* 右端に到達 */
+            }
+            100% {
+                left: -120px; /* 再び左に戻る */
+            }
+        }
+          /* 動画のスタイル */
+          .video-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: none;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        video {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .close-video {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            color: white;
+            cursor: pointer;
+        }
+
+/* 動画のオーバーレイの透過とアニメーション */
+.video-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    opacity: 0; /* 初期状態は透明 */
+    transition: opacity 0.5s ease; /* フェードイン・フェードアウトのアニメーション */
+}
+
+/* 動画が表示されるとき */
+.video-overlay.show {
+    display: flex;
+    opacity: 1; /* フェードイン */
+}
+
+.large-video {
+    width: 90% !important;
+    height: 90% !important;
+}
+
+
+.hero-image {
+    position: fixed;
+    bottom: -50px;
+    right: 0; /* 右端に配置 */
+    transform: scale(0.5); 
+    opacity: 0; 
+    transition: transform 0.5s ease-out, opacity 0.5s ease-out;
+    width: 300px; 
+    height: auto;
+}
+
+
+    </style>
+</head>
+<body>
+      <!-- ドラゴンアニメーション -->
+<div class="dragon-container">
+    <a href="https://minecraft.fandom.com/ja/wiki/%E3%82%A8%E3%83%B3%E3%83%80%E3%83%BC%E3%83%89%E3%83%A9%E3%82%B4%E3%83%B3" target="_blank">
+        <img src="画像/Ender_Dragon.webp" alt="Little Dragon" class="dragon">
+    </a>
+</div>
+
+
+    <div class="container">
+        <header>
+            <h1>10(数字)キーで隠しコマンド発生するかも…？(音量注意ね)</h1>
+           
+            <p id="current-date"></p>
+        </header>
+        <nav>
+            
+            <a href="javascript:void(0)" class="link-button" onclick="playVideo('MSSP 魔法前.mp4')">
+                <img src="画像/シーン1.png" alt="シーン1" class="link-image">シーン1
+            </a>
+            <a href="javascript:void(0)" class="link-button" onclick="playVideo('MSSP 魔法後.mp4')">
+                    <img src="画像/シーン2.png" alt="シーン2" class="link-image">シーン2
+                </a>
+                <a href="javascript:void(0)" class="link-button"  onclick="playVideo('MSSP 黄昏.mp4')">
+                    <img src="画像/シーン3.png" alt="シーン3" class="link-image">シーン3
+                </a>
+                <a href="javascript:void(0)" class="link-button"  onclick="playVideo('MSSP RPG前.mp4')">
+                    <img src="画像/sinkei.png" alt="シーン4" class="link-image">シーン4…？
+                </a>
+                <a href="javascript:void(0)" class="link-button"  onclick="playVideo('MSSP RPG後.mp4')">
+                    <img src="画像/シーン5.png" alt="シーン5" class="link-image">シーン5
+                </a>
+                <a href="javascript:void(0)" class="link-button"  onclick="playVideo('MSSP 天国.mp4')">
+                    <img src="画像/シーン3.png" alt="シーン6" class="link-image">シーン6
+                </a>
+            </nav>
+            
+            
+            <div class="video-overlay" id="videoOverlay">
+                <span class="close-video" onclick="closeVideo()">&times;</span>
+                <video id="videoPlayer" controls>
+                    <source src="1.mp4" type="video/mp4">
+                    お使いのブラウザは動画タグをサポートしていません。
+                </video>
+                <div class="video-overlay" id="videoOverlay">
+                    <span class="close-video" onclick="closeVideo()">&times;</span>
+                    <video id="videoPlayer" controls>
+                        <source src="" type="video/mp4">
+                        お使いのブラウザは動画タグをサポートしていません。
+                    </video>
+                </div>
+                
+            </div>
+
+        </nav>
+
+        <button class="toggle-button" onclick="toggleBackgroundColor()">切替</button>
+    </div>
+    <div class="darman-container">
+        <a href="https://minecraft.fandom.com/ja/wiki/%E3%82%A8%E3%83%B3%E3%83%80%E3%83%BC%E3%83%9E%E3%83%B3" target="_blank">
+        
+        <img src="画像/Enderman_29.webp" alt="Darman" class="darman">    </a>
+    </div>
+<!-- hero.png の配置 -->
+<a href="https://minecraft.fandom.com/ja/wiki/%E3%82%A6%E3%82%A9%E3%83%BC%E3%83%87%E3%83%B3" target="_blank">
+    <img id="heroImage" class="hero-image" src="画像/Warden.webp" alt="Hero Image">
+</a>
+
+    <script>
+    function toggleBackgroundColor() {
+        const currentColor = localStorage.getItem('backgroundColor');
+        if (currentColor === 'cf12cf') {
+            document.body.style.backgroundColor = '#fff';  // 白に変更
+            document.body.style.color = '#000';  // 文字色を黒に
+            localStorage.setItem('backgroundColor', 'white');
+        } else {
+            document.body.style.backgroundColor = '#cf12cf';  // ピンク色に変更
+            document.body.style.color = '#ff69b4';  // 文字色をピンクに
+            localStorage.setItem('backgroundColor', 'cf12cf');
+        }
+    }
+
+    window.onload = function() {
+        const savedColor = localStorage.getItem('backgroundColor');
+        if (savedColor === 'cf12cf') {
+            document.body.style.backgroundColor = '#cf12cf';
+            document.body.style.color = '#ff69b4';
+        } else {
+            document.body.style.backgroundColor = '#fff';
+            document.body.style.color = '#000';
+        }
+    };
+
+    const videoSources = {
+        "1": "1.mp4",
+        "2": "2.mp4",
+        "3": "3.mp4",
+        "4": "4.mp4",
+        "5": "5.mp4",
+        "6": "6.mp4",
+        "7": "7.mp4",
+        "8": "8.mp4",
+        "9": "9.mp4",
+        "0": "10.mp4",
+    };
+
+    // 1回だけkeydownイベントリスナーを設定
+    document.addEventListener("keydown", function(event) {
+        if (videoSources[event.key]) {
+            playVideo(videoSources[event.key], event.key);
+        } else if (event.key === "Escape") {
+            closeVideo(); // Escapeキーで閉じる
+        }
+    });
+
+    function playVideo(source, key) {
+        const overlay = document.getElementById("videoOverlay");
+        const video = document.getElementById("videoPlayer");
+
+        video.src = source;
+        video.load();
+
+        if (key === "0") {
+            video.classList.add("large-video");
+        } else {
+            video.classList.remove("large-video");
+        }
+
+        overlay.classList.add("show");
+
+        video.onloadedmetadata = function() {
+            video.play();
+            video.volume = (key === "1") ? 0.5 : 1.0;
+        };
+
+        video.onended = function() {
+            closeVideo();
+        };
+    }
+
+    // closeVideo関数
+    function closeVideo() {
+        const overlay = document.getElementById("videoOverlay");
+        const video = document.getElementById("videoPlayer");
+
+        overlay.classList.remove("show");
+        video.pause();
+        video.currentTime = 0;
+        video.classList.remove("large-video");
+    }
+
+    window.addEventListener("scroll", function() {
+        let scrollY = window.scrollY;
+        let heroImage = document.getElementById("heroImage");
+
+        let maxScale = 2;
+        let maxOpacity = 1;
+
+        let scale = Math.min(0.5 + scrollY / 50, maxScale);
+        let opacity = Math.min(scrollY / 50, maxOpacity);
+
+        heroImage.style.transform = `translateX(-50%) scale(${scale})`;
+        heroImage.style.opacity = opacity;
+    });
+
+</script>
+
+</body>
+</html>

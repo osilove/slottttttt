@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=0.75">
+    <title>動画まとめ</title>
+    <style>
+        body {
+            text-align: center;
+            background-color: #0e9811;
+        }
+        .computer {
+            display: inline-block;
+            width: 1600px;
+            height: 800px;
+            background: black;
+            border: 25px solid rgb(164, 164, 164);
+            border-radius: 10px;
+            position: relative;
+            animation: metallic-shine 5s infinite linear;
+        }
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+            position: relative;
+        }
+        iframe, img {
+            width: 100%;
+            height: 100%;
+            display: none;
+            border: none;
+        }
+        .power-btn {
+            position: absolute;
+            bottom: -30px;
+            right: -30px;
+            width: 40px;
+            height: 40px;
+            background: gray;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .power-btn::before {
+            content: '\23FB';
+            font-size: 30px;
+            color: white;
+        }
+
+        @keyframes metallic-shine {
+            0% { border-color: rgb(164, 164, 164); }
+            50% { border-color: rgb(255, 255, 255); }
+            100% { border-color: rgb(164, 164, 164); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="computer">
+        <div class="screen">
+            <span id="message">Fatal error</span>
+            <img id="loadingImage" src="シッテム.jpg" alt="Loading">
+            <iframe id="pcScreen" src="バナナはおやつに入らない.html"></iframe>
+            <button class="power-btn" onclick="togglePower()"></button>
+        </div>
+    </div>
+
+    <script>
+        let isOn = false;
+        function togglePower() {
+            const message = document.getElementById("message");
+            const loadingImage = document.getElementById("loadingImage");
+            const pcScreen = document.getElementById("pcScreen");
+            
+            if (!isOn) {
+                message.style.display = "none";
+                loadingImage.style.display = "block";
+                pcScreen.style.display = "none";
+                
+                setTimeout(() => {
+                    loadingImage.style.display = "none";
+                    pcScreen.style.display = "block";
+                }, 3000);
+            } else {
+                message.style.display = "block";
+                loadingImage.style.display = "none";
+                pcScreen.style.display = "none";
+            }
+            isOn = !isOn;
+        }
+           // ESCキーでサイトに戻る
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        window.location.href = "../../../サイト/desaku.html";
+      }
+    });
+    </script>
+
+</body>
+</html>
