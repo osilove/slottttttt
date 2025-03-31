@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>分解タックル</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+  <script>
+    let scene, camera, renderer;
+    let maze, player, clock;
+    let isColliding = false;
+    let isGameCleared = false;
+    let playerVelocity = new THREE.Vector3(); // プレイヤーの速度
+    let velocityDamping = 0.95; // 減速
+
+    // 初期化
+    function init() {
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      clock = new THREE.Clock();
+
+      // ライトの追加
+      const light = new THREE.PointLight(0xFFFFFF, 1, 100);
+      light.position.set(10, 10, 10);
+      scene.add(light);
+
+      // カメラ位置を少し上からに変更
+      camera.position.set(5, 8, 10);  // Y軸を8に変更して、カメラを上に
+      camera.lookAt(new THREE.Vector3(5, 1, 5));  // 依然としてシーンの中心を見つめる
+
+      // 迷路の生成
+      generateMaze();
+
+      // プレイヤー（ピンクの球）
+      const playerGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+      const playerMaterial = new THREE.MeshBasicMaterial({ color: 0xff69b4 });
+      player = new THREE.Mesh(playerGeometry, playerMaterial);
+      player.position.set(1, 0.5, 1);
+      scene.add(player);
+
+      window.addEventListener('resize', onWindowResize, false);
+      window.addEventListener('keydown', onKeyDown, false);
+
+      isGameCleared = false;  // ゲーム開始時にクリアフラグをリセット
+
+      animate();
+    }
+
+    // 迷路のランダム生成
+    function generateMaze() {
+      maze = [];
+      const rows = 10;
+      const cols = 10;
+
+      const breakableWallMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.6 }); // 壊れる壁（赤色）
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          // 壁をすべて壊れる壁として配置
+          const geometry = new THREE.BoxGeometry(1, 0.2, 1); // 壁を薄く設定
+          const wall = new THREE.Mesh(geometry, breakableWallMaterial);
+          wall.position.set(c * 1.1, 1, r * 1.1);
+          scene.add(wall);
+          maze.push(wall);
+          wall.userData = { breakable: true }; // 壊れる壁にフラグ
+        }
+      }
+    }
+
+    // キー入力の処理
+    function onKeyDown(event) {
+      if (isGameCleared) return; // クリア後は操作を無効に
+
+      const speed = 0.1;
+      switch (event.key) {
+        case 'ArrowUp':
+          playerVelocity.z -= speed;
+          break;
+        case 'ArrowDown':
+          playerVelocity.z += speed;
+          break;
+        case 'ArrowLeft':
+          playerVelocity.x -= speed;
+          break;
+        case 'ArrowRight':
+          playerVelocity.x += speed;
+          break;
+        case 'Escape':  // Escキーが押された場合
+          resetGame();  // ゲームをリセット
+          break;
+      }
+
+      // プレイヤーが迷路の外に出ないように制限
+      player.position.x = Math.max(0, Math.min(player.position.x + playerVelocity.x, 10));  // X軸の制限
+      player.position.z = Math.max(0, Math.min(player.position.z + playerVelocity.z, 10));  // Z軸の制限
+
+      // 壁との衝突判定
+      checkCollisions();
+    }
+
+    // 壁との衝突判定
+    function checkCollisions() {
+      maze.forEach((wall) => {
+        const distance = player.position.distanceTo(wall.position);
+        if (distance < 1) {
+          isColliding = true;
+          if (wall.userData.breakable) {
+            breakWall(wall);
+          } else {
+            // 壊れない壁に衝突した場合、プレイヤーはその場で止まる
+            playerVelocity.set(0, 0, 0); // 衝突時に速度をゼロに
+          }
+        }
+      });
+    }
+
+    // 壁の破壊アニメーション
+    function breakWall(wall) {
+      const animationDuration = 1;
+      const scatterPieces = 10; // 壊れる壁が分解する破片数
+      const pieces = [];
+
+      // 壊れる壁の破片を生成
+      for (let i = 0; i < scatterPieces; i++) {
+        const pieceGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+        const pieceMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const piece = new THREE.Mesh(pieceGeometry, pieceMaterial);
+        
+        // 壊れる壁の位置にランダムなオフセットを加えて破片を配置
+        piece.position.set(
+          wall.position.x + (Math.random() - 0.5) * 0.5,
+          wall.position.y + (Math.random() - 0.5) * 0.5,
+          wall.position.z + (Math.random() - 0.5) * 0.5
+        );
+        scene.add(piece);
+        pieces.push(piece);
+
+        // 破片のアニメーション
+        const scatter = new TWEEN.Tween(piece.position)
+          .to({
+            x: piece.position.x + (Math.random() - 0.5) * 2,
+            y: piece.position.y + Math.random(),
+            z: piece.position.z + (Math.random() - 0.5) * 2
+          }, animationDuration * 1000)
+          .easing(TWEEN.Easing.Exponential.Out)
+          .onComplete(() => scene.remove(piece))  // アニメーション終了時に削除
+          .start();
+      }
+
+      // 元の壁を削除
+      scene.remove(wall);
+    }
+
+    // ゲームのリセット
+    function resetGame() {
+      // すでに初期化されているシーンを完全に削除
+      scene.clear();  
+
+      // 新しいシーンを初期化
+      init();  // 初期化関数を再呼び出し
+    }
+
+    // 画面リサイズ対応
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // アニメーション
+    function animate() {
+      requestAnimationFrame(animate);
+      playerVelocity.multiplyScalar(velocityDamping); // 減速処理
+      player.position.add(playerVelocity); // プレイヤーを移動
+
+      TWEEN.update();  // アニメーション更新の呼び出しを追加
+      renderer.render(scene, camera);
+    }
+
+    // 初期化呼び出し
+    init();
+
+     // ESCキーでサイトに戻る
+     window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = "../サイト/desaku.html";
+            }
+        });
+  </script>
+</body>
+</html>

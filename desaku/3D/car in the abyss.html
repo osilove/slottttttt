@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>青豆腐小僧</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+        #score { position: absolute; top: 10px; left: 10px; color: white; font-size: 24px; font-family: Arial, sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <!-- サイトに戻るリンク -->
+    <a id="backToSiteLink" href="../サイト/desaku.html" class="unit-conversion-button" style="display: none;">サイトに戻る</a>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // 3Dシーンのセットアップ
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // 環境光
+        const ambientLight = new THREE.AmbientLight(0x404040, 1);
+        scene.add(ambientLight);
+
+        // プレイヤー車の作成
+        const carGeometry = new THREE.BoxGeometry(2, 1, 4);
+        const carMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+        const playerCar = new THREE.Mesh(carGeometry, carMaterial);
+        playerCar.position.y = 0.5;
+        playerCar.position.x = 0;
+        scene.add(playerCar);
+
+        // 曲がりくねった道路
+        const roadGeometry = new THREE.PlaneGeometry(100, 1000);
+        const roadMaterial = new THREE.MeshBasicMaterial({ color: 0x777777, side: THREE.DoubleSide });
+        const road = new THREE.Mesh(roadGeometry, roadMaterial);
+        road.rotation.x = - Math.PI / 2;
+        road.position.y = 0;
+        scene.add(road);
+
+        // 白線の作成（中央、左側、右側）
+        function createWhiteLine(xPos) {
+            const lineGeometry = new THREE.PlaneGeometry(0.1, 1000);  // 細い白線
+            const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const whiteLine = new THREE.Mesh(lineGeometry, lineMaterial);
+            whiteLine.position.x = xPos;  // 中央線やサイドラインの位置
+            whiteLine.position.y = 0.1;
+            whiteLine.rotation.x = - Math.PI / 2;  // 地面と平行に
+            scene.add(whiteLine);
+        }
+
+        // 白線を追加（中央と左右）
+        createWhiteLine(0);   // 中央線
+        createWhiteLine(-5);  // 左側白線
+        createWhiteLine(5);   // 右側白線
+
+        // 横向きの白線を追加
+        function createHorizontalWhiteLines() {
+            const lineGeometry = new THREE.PlaneGeometry(1, 5);  // 横向きの白線
+            const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const horizontalLine = new THREE.Mesh(lineGeometry, lineMaterial);
+            horizontalLine.rotation.x = -Math.PI / 2;
+            return horizontalLine;
+        }
+
+        // 横向き白線を一定間隔で配置
+        const horizontalLines = [];
+        const lineInterval = 10; // 白線の間隔（10ユニットごと）
+
+        function addHorizontalLines() {
+            for (let i = 0; i < 200; i++) {
+                const horizontalLine = createHorizontalWhiteLines();
+                horizontalLine.position.z = i * lineInterval - 1000; // 道路の先端から配置
+                horizontalLine.position.y = 0.05;  // 少し上に配置
+                scene.add(horizontalLine);
+                horizontalLines.push(horizontalLine);
+            }
+        }
+
+        // 障害物と標識の作成
+        const obstacleGeometry = new THREE.BoxGeometry(2, 1, 2);
+        const obstacleMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const obstacles = [];
+
+        function createObstacle() {
+            const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
+            obstacle.position.x = Math.random() * 40 - 20;
+            obstacle.position.z = playerCar.position.z - 500; // プレイヤーの前方に配置
+            obstacles.push(obstacle);
+            scene.add(obstacle);
+        }
+
+        const signGeometry = new THREE.CylinderGeometry(0.5, 0.5, 5);
+        const signMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+        const signs = [];
+
+        function createSign() {
+            const sign = new THREE.Mesh(signGeometry, signMaterial);
+            sign.position.x = Math.random() * 40 - 20;
+            sign.position.z = playerCar.position.z - 500;
+            signs.push(sign);
+            scene.add(sign);
+        }
+
+        // カメラの位置
+        camera.position.z = 10;
+        camera.position.y = 3;
+        camera.lookAt(playerCar.position);
+
+        // 車の加速と減速
+        let carSpeed = 0;
+        const maxSpeed = 0.3;
+        const acceleration = 0.01;
+        const deceleration = 0.005;
+
+        // 道路アニメーション
+        const roadSpeed = 0.05;
+        let roadPositionZ = 0;
+
+        // 障害物と景観を一定間隔で生成
+        let obstacleTimer = 0;
+        let signTimer = 0;
+        const resetPosition = 500;
+
+        // 車を左右に動かす範囲
+        const moveLimit = 40;
+
+        // 曲がりくねった道路の実装
+        const roadCurves = [
+            { x: -10, z: -100 },
+            { x: 10, z: -200 },
+            { x: -15, z: -300 },
+            { x: 5, z: -400 }
+        ];
+
+        let currentCurveIndex = 0;
+
+        // スコア
+        let score = 0;
+
+        // 車のアニメーション（加速・減速）
+        function animateCar() {
+            if (carSpeed > 0) {
+                playerCar.rotation.x = Math.sin(carSpeed * 10) * 0.1; // 車の前傾を追加
+            } else {
+                playerCar.rotation.x = 0; // 減速時は元に戻す
+            }
+        }
+
+        // キー入力で車を動かす
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowUp') {
+                if (carSpeed < maxSpeed) carSpeed += acceleration;
+            } else if (event.key === 'ArrowDown') {
+                if (carSpeed > 0) carSpeed -= deceleration;
+            } else if (event.key === 'ArrowLeft') {
+                if (playerCar.position.x > -moveLimit) playerCar.position.x -= 1;
+            } else if (event.key === 'ArrowRight') {
+                if (playerCar.position.x < moveLimit) playerCar.position.x += 1;
+            }
+            // Escキーが押されたときにリンクをクリック
+            else if (event.key === 'Escape') {
+                document.getElementById('backToSiteLink').click();
+            }
+        });
+
+        // ゲームオーバーチェック
+        function checkCollisions() {
+            obstacles.forEach(obstacle => {
+                const distance = playerCar.position.distanceTo(obstacle.position);
+                if (distance < 2) {
+                    alert("Game Over! Score: " + score);
+                    window.location.reload();
+                }
+            });
+        }
+
+        // スコアを1600ごとにループ
+        function resetGame() {
+            if (score >= 1600) {
+                score = score % 1600;  // 1600でスコアをリセット（スコア保持）
+                playerCar.position.set(0, 0.5, 0);  // 車を初期位置に戻す
+                road.position.set(0, 0, 0);  // 道路も初期位置に戻す
+                currentCurveIndex = 0;  // 曲がりくねった道路を最初に戻す
+            }
+        }
+
+        // 虹色に変化する関数
+        function animateRainbowRoad() {
+            const time = Date.now() * 0.002;  // 時間に基づく色のアニメーション
+            road.material.color.setHSL((time % 1), 1, 0.5);  // HSL値で色を変化させる
+        }
+
+        // アニメーションループ
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // スコアが1600を超えた場合、ゲームをリセット（スコア保持）
+            resetGame();
+
+            // 車の移動
+            playerCar.position.z += carSpeed;
+
+            // 曲がりくねった道路のアニメーション
+            if (currentCurveIndex < roadCurves.length) {
+                const curve = roadCurves[currentCurveIndex];
+                playerCar.position.x = curve.x;
+                road.position.z += roadSpeed;
+
+                if (road.position.z > curve.z) {
+                    currentCurveIndex++;
+                }
+            }
+
+            // 車のアニメーション
+            animateCar();
+
+            // カメラの位置を車に追従させる
+            camera.position.z = playerCar.position.z + 10;
+            camera.position.y = 3;
+            camera.lookAt(playerCar.position);
+
+            // 障害物と標識の生成
+            obstacleTimer++;
+            signTimer++;
+            if (obstacleTimer > 50) {
+                createObstacle();
+                obstacleTimer = 0;
+            }
+
+            if (signTimer > 150) {
+                createSign();
+                signTimer = 0;
+            }
+
+            // 障害物や標識を進行方向に移動
+            obstacles.forEach(obstacle => {
+                obstacle.position.z += carSpeed;
+                if (obstacle.position.z > resetPosition) {
+                    scene.remove(obstacle);
+                    obstacles.splice(obstacles.indexOf(obstacle), 1);
+                }
+            });
+
+            signs.forEach(sign => {
+                sign.position.z += carSpeed;
+                if (sign.position.z > resetPosition) {
+                    scene.remove(sign);
+                    signs.splice(signs.indexOf(sign), 1);
+                }
+            });
+
+            // スコアの更新
+            score++;
+            document.getElementById("score").innerText = "Score: " + score;
+
+            // 衝突チェック
+            checkCollisions();
+
+            // 虹色の道路アニメーション
+            if (score >= 1600) {
+                animateRainbowRoad();
+            }
+
+            // シーンのレンダリング
+            renderer.render(scene, camera);
+        }
+
+        addHorizontalLines();  // 横向き白線を追加
+
+        animate();
+
+        // ウィンドウリサイズに対応
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        });
+    </script>
+</body>
+
+</html>

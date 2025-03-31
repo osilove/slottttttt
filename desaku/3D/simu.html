@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分解シミュレーションゲーム</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000000;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        let fragments = [];
+        let time = 0;
+
+        // 背景色を変化させるためのColorオブジェクト
+        let backgroundColor = new THREE.Color(0x000000);
+
+        // 立方体の作成
+        const geometry = new THREE.BoxGeometry();
+        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
+
+        camera.position.z = 5;
+
+        // クリックされた位置でフラグメントを飛ばす
+        window.addEventListener('click', onMouseClick, false);
+
+        function onMouseClick(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(cube);
+
+            if (intersects.length > 0) {
+                breakCube(intersects[0].point);  // クリック位置で分解
+                createExplosionEffect(intersects[0].point);
+            }
+        }
+
+        // 立方体をバラバラにする
+        function breakCube(clickPosition) {
+            const geometry = cube.geometry;
+            const positions = geometry.attributes.position.array;
+
+            for (let i = 0; i < positions.length; i += 9) {
+                const fragmentGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+                const fragmentMaterial = new THREE.MeshBasicMaterial({ color: Math.random() * 0xffffff });
+
+                const fragment = new THREE.Mesh(fragmentGeometry, fragmentMaterial);
+                scene.add(fragment);
+
+                fragment.position.set(
+                    positions[i] / 2,
+                    positions[i + 1] / 2,
+                    positions[i + 2] / 2
+                );
+
+                fragment.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 2,
+                    (Math.random() - 0.5) * 2,
+                    (Math.random() - 0.5) * 2
+                );
+
+                fragment.light = new THREE.PointLight(0xffffff, 1, 5, 2);
+                fragment.light.position.copy(fragment.position);
+                scene.add(fragment.light);
+
+                const distance = fragment.position.distanceTo(clickPosition);
+                if (distance < 0.75) {
+                    scene.remove(fragment);
+                    fragments = fragments.filter(frag => frag !== fragment);
+                } else {
+                    fragments.push(fragment);
+                }
+            }
+        }
+
+        // クリック時に爆発エフェクトを追加
+        function createExplosionEffect(clickPosition) {
+            const particleCount = 100;
+            const particles = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount; i++) {
+                const x = (Math.random() - 0.5) * 2;
+                const y = (Math.random() - 0.5) * 2;
+                const z = (Math.random() - 0.5) * 2;
+
+                positions[i * 3] = clickPosition.x + x;
+                positions[i * 3 + 1] = clickPosition.y + y;
+                positions[i * 3 + 2] = clickPosition.z + z;
+            }
+
+            particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.05 });
+            const particleSystem = new THREE.Points(particles, material);
+            scene.add(particleSystem);
+
+            setTimeout(() => {
+                scene.remove(particleSystem);
+            }, 500);
+        }
+
+        // 背景色を変化させる
+        function changeBackgroundColor() {
+            time += 0.0000000000000000005;  // 変化速度を遅くするために増加量を減らす
+            const r = Math.sin(time) * 0.5 + 0.5;
+            const g = Math.sin(time + Math.PI / 2) * 0.5 + 0.5;
+            const b = Math.sin(time + Math.PI) * 0.5 + 0.5;
+
+            backgroundColor.setRGB(r, g, b);
+            scene.background = backgroundColor;
+
+            // 背景色の明度を計算して立方体の色を調整
+            const brightness = 0.3 * r + 0.59 * g + 0.11 * b; // 輝度計算（リニア加重平均）
+            const cubeColor = new THREE.Color(Math.sin(time) * 0.5 + 0.5, Math.sin(time + Math.PI / 2) * 0.5 + 0.5, Math.sin(time + Math.PI) * 0.5 + 0.5);
+            
+            // 背景色の明度に基づいて、立方体の色を少し調整して見やすくする
+            if (brightness > 0.5) {
+                cubeColor.offsetHSL(0.5, 0, 0); // 明るい背景なら色調を少し変更
+            }
+
+            cube.material.color.set(cubeColor);
+            cube.material.needsUpdate = true;
+        }
+
+        // アニメーション関数
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.01;
+
+            // 立方体を回転させ、色を変更
+            cube.rotation.x += 0.01;
+            cube.rotation.y += 0.01;
+
+            // フラグメントの動き
+            for (const fragment of fragments) {
+                fragment.position.add(fragment.velocity);
+                fragment.light.intensity = 1 + Math.sin(Date.now() * 0.005 + fragment.position.x * 0.5) * 0.5;
+
+                // 画面外に出ないように制限
+                if (Math.abs(fragment.position.x) > 10) fragment.velocity.x *= -1;
+                if (Math.abs(fragment.position.y) > 10) fragment.velocity.y *= -1;
+                if (Math.abs(fragment.position.z) > 10) fragment.velocity.z *= -1;
+            }
+
+            // 背景色の更新
+            changeBackgroundColor();
+
+            // シーンをレンダリング
+            renderer.render(scene, camera);
+        }
+
+        // ウィンドウリサイズ対応
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        });
+
+        // ESCキーでサイトに戻る
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = "../サイト/desaku.html";
+            }
+        });
+
+        // アニメーション開始
+        animate();
+    </script>
+</body>
+</html>
